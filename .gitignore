@@ -216,3 +216,24 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local Agent Skills & Lockfiles
+.agents/
+.claude/
+skills-lock.json
+
+# Node & Build Artifacts
+node_modules/
+dist/
+
+# Cloudflare Wrangler Local Cache & State
+.wrangler/
+
+# Environment & Secret Files
+.env
+.env.*
+!.env.example
+
+# OS metadata
+.DS_Store
+Thumbs.db
