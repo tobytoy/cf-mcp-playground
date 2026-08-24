@@ -1,4 +1,5 @@
 import { Redis } from "ioredis";
+import type { AppEnv } from "../types/env.js";
 
 export interface CacheStats {
   hits: number;
@@ -16,10 +17,17 @@ export interface CacheService {
   getStats(): Promise<CacheStats>;
 }
 
+const DEFAULT_MAX_SIZE = 500;
+
 export class MemoryCache implements CacheService {
   private store = new Map<string, { value: string; expiresAt: number | null }>();
   private hits = 0;
   private misses = 0;
+  private readonly maxSize: number;
+
+  constructor(maxSize = DEFAULT_MAX_SIZE) {
+    this.maxSize = maxSize;
+  }
 
   async get(key: string): Promise<string | null> {
     const entry = this.store.get(key);
@@ -27,7 +35,7 @@ export class MemoryCache implements CacheService {
       this.misses++;
       return null;
     }
-    if (entry.expiresAt && Date.now() > entry.expiresAt) {
+    if (entry.expiresAt !== null && Date.now() > entry.expiresAt) {
       this.store.delete(key);
       this.misses++;
       return null;
@@ -37,6 +45,13 @@ export class MemoryCache implements CacheService {
   }
 
   async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
+    // Evict oldest entry when at capacity (Map preserves insertion order)
+    if (this.store.size >= this.maxSize && !this.store.has(key)) {
+      const oldest = this.store.keys().next().value;
+      if (oldest !== undefined) {
+        this.store.delete(oldest);
+      }
+    }
     const expiresAt = ttlSeconds ? Date.now() + ttlSeconds * 1000 : null;
     this.store.set(key, { value, expiresAt });
   }
@@ -62,48 +77,32 @@ export class MemoryCache implements CacheService {
 
 export class RedisCache implements CacheService {
   private client: Redis | null = null;
-  private memoryFallback: MemoryCache = new MemoryCache();
+  private readonly memoryFallback = new MemoryCache();
   private isConnected = false;
   private hits = 0;
   private misses = 0;
 
   constructor(redisUrlOrOptions?: string | { host?: string; port?: number; password?: string }) {
     try {
-      if (typeof redisUrlOrOptions === "string") {
-        this.client = new Redis(redisUrlOrOptions, {
-          maxRetriesPerRequest: 2,
-          retryStrategy: (times: number) => (times > 3 ? null : Math.min(times * 100, 1000)),
-          lazyConnect: true,
-        });
-      } else {
-        const host = redisUrlOrOptions?.host || process.env.REDIS_HOST || "127.0.0.1";
-        const port = redisUrlOrOptions?.port || parseInt(process.env.REDIS_PORT || "6379", 10);
-        const password = redisUrlOrOptions?.password || process.env.REDIS_PASSWORD;
-        this.client = new Redis({
-          host,
-          port,
-          maxRetriesPerRequest: 2,
-          retryStrategy: (times: number) => (times > 3 ? null : Math.min(times * 100, 1000)),
-          lazyConnect: true,
-        });
-      }
+      this.client = typeof redisUrlOrOptions === "string"
+        ? new Redis(redisUrlOrOptions, {
+            maxRetriesPerRequest: 2,
+            retryStrategy: (times: number) => (times > 3 ? null : Math.min(times * 100, 1000)),
+            lazyConnect: true,
+          })
+        : new Redis({
+            host: redisUrlOrOptions?.host ?? "127.0.0.1",
+            port: redisUrlOrOptions?.port ?? 6379,
+            password: redisUrlOrOptions?.password,
+            maxRetriesPerRequest: 2,
+            retryStrategy: (times: number) => (times > 3 ? null : Math.min(times * 100, 1000)),
+            lazyConnect: true,
+          });
 
-      this.client.on("connect", () => {
-        this.isConnected = true;
-      });
-
-      this.client.on("error", (_err: unknown) => {
-        this.isConnected = false;
-      });
-
-      this.client.on("close", () => {
-        this.isConnected = false;
-      });
-
-      // Attempt initial connection asynchronously
-      this.client.connect().catch(() => {
-        this.isConnected = false;
-      });
+      this.client.on("connect", () => { this.isConnected = true; });
+      this.client.on("error", (_err: unknown) => { this.isConnected = false; });
+      this.client.on("close", () => { this.isConnected = false; });
+      this.client.connect().catch(() => { this.isConnected = false; });
     } catch {
       this.isConnected = false;
       this.client = null;
@@ -114,10 +113,7 @@ export class RedisCache implements CacheService {
     if (this.client && this.isConnected) {
       try {
         const val = await this.client.get(key);
-        if (val !== null) {
-          this.hits++;
-          return val;
-        }
+        if (val !== null) { this.hits++; return val; }
         this.misses++;
         return null;
       } catch {
@@ -137,8 +133,7 @@ export class RedisCache implements CacheService {
         }
         return;
       } catch {
-        await this.memoryFallback.set(key, value, ttlSeconds);
-        return;
+        // fall through to memory fallback
       }
     }
     await this.memoryFallback.set(key, value, ttlSeconds);
@@ -147,8 +142,7 @@ export class RedisCache implements CacheService {
   async delete(key: string): Promise<boolean> {
     if (this.client && this.isConnected) {
       try {
-        const res = await this.client.del(key);
-        return res > 0;
+        return (await this.client.del(key)) > 0;
       } catch {
         return this.memoryFallback.delete(key);
       }
@@ -160,59 +154,54 @@ export class RedisCache implements CacheService {
     if (this.client && this.isConnected) {
       try {
         await this.client.flushdb();
+        return;
       } catch {
-        await this.memoryFallback.clear();
+        // fall through
       }
-    } else {
-      await this.memoryFallback.clear();
     }
+    await this.memoryFallback.clear();
   }
 
   async getStats(): Promise<CacheStats> {
     if (this.client && this.isConnected) {
       try {
-        const dbsize = await this.client.dbsize();
         return {
           hits: this.hits,
           misses: this.misses,
-          keysCount: dbsize,
+          keysCount: await this.client.dbsize(),
           type: "redis",
           connected: true,
         };
       } catch {
-        // fallback
+        // fall through
       }
     }
-    const memStats = await this.memoryFallback.getStats();
+    const mem = await this.memoryFallback.getStats();
     return {
-      hits: this.hits + memStats.hits,
-      misses: this.misses + memStats.misses,
-      keysCount: memStats.keysCount,
+      hits: this.hits + mem.hits,
+      misses: this.misses + mem.misses,
+      keysCount: mem.keysCount,
       type: "memory",
       connected: this.isConnected,
     };
   }
 }
 
-let globalCacheInstance: CacheService | null = null;
+/**
+ * Create a cache instance from env bindings — no global singleton,
+ * callers own the lifetime of the returned service.
+ */
+export function createCacheService(env?: AppEnv): CacheService {
+  const redisUrl = env?.REDIS_URL;
+  const redisHost = env?.REDIS_HOST;
 
-export function getCacheService(env?: Record<string, any>): CacheService {
-  if (globalCacheInstance) {
-    return globalCacheInstance;
-  }
-
-  const redisUrl = env?.REDIS_URL || process.env.REDIS_URL;
-  const redisHost = env?.REDIS_HOST || process.env.REDIS_HOST;
-
-  if (redisUrl || redisHost) {
-    globalCacheInstance = new RedisCache(redisUrl || {
+  if (redisUrl) return new RedisCache(redisUrl);
+  if (redisHost) {
+    return new RedisCache({
       host: redisHost,
       port: env?.REDIS_PORT ? parseInt(env.REDIS_PORT, 10) : undefined,
-      password: env?.REDIS_PASSWORD || process.env.REDIS_PASSWORD,
+      password: env?.REDIS_PASSWORD,
     });
-  } else {
-    globalCacheInstance = new MemoryCache();
   }
-
-  return globalCacheInstance;
+  return new MemoryCache();
 }
