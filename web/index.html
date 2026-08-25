@@ -31,7 +31,7 @@
     <!-- ── Top Header Bar ────────────────────────────────────────────────── -->
     <header class="header-bar">
       <div class="app-brand">
-        <span class="app-logo">🚦</span>
+        <img class="app-logo-img" src="./assets/icon.png" alt="Logo" />
         <div class="app-title-group">
           <h1>交通情境感知 AI</h1>
           <span>Cloudflare MCP Edge Engine</span>
@@ -51,32 +51,49 @@
         </div>
 
         <button id="btn-manual-refresh" class="btn-icon" title="手動更新">🔄</button>
+        <button id="btn-open-favs" class="btn-icon" title="管理常用位置別稱">⭐️</button>
         <button id="btn-open-settings" class="btn-icon" title="設定 Token 與 API">⚙️</button>
       </div>
     </header>
 
-    <!-- ── Location Toolbar ──────────────────────────────────────────────── -->
+    <!-- ── 1. Origin Location Toolbar ────────────────────────────────────── -->
     <section class="location-panel">
       <div class="location-header">
         <div class="location-info">
-          <span>📍</span>
-          <span id="current-location-text">台北101商圈 (25.033964, 121.564468)</span>
+          <span class="location-tag">出發地</span>
+          <span id="origin-location-text">台北101商圈 (25.033964, 121.564468)</span>
         </div>
       </div>
       <div class="location-actions">
         <button id="btn-gps" class="btn-location">🎯 我的 GPS 位置</button>
-        <button id="btn-open-map" class="btn-location">🗺️ 地圖選點</button>
-        <select id="preset-location-select" class="preset-select">
-          <option value="">📍 常用熱門商圈快速選取...</option>
+        <button id="btn-origin-map" class="btn-location">🗺️ 地圖選點</button>
+        <select id="origin-preset-select" class="preset-select">
+          <option value="">📍 選擇出發地 / 常用地點...</option>
         </select>
       </div>
     </section>
 
-    <!-- ── Identity & State Selectors Matrix ─────────────────────────────── -->
+    <!-- ── 2. Destination Location Toolbar ───────────────────────────────── -->
+    <section class="location-panel destination-theme">
+      <div class="location-header">
+        <div class="location-info">
+          <span class="location-tag dest">目的地</span>
+          <span id="dest-location-text">台北車站 / 雙鐵轉乘 (25.047761, 121.517049)</span>
+        </div>
+      </div>
+      <div class="location-actions">
+        <button id="btn-dest-map" class="btn-location dest">🗺️ 地圖選目的地</button>
+        <select id="dest-preset-select" class="preset-select">
+          <option value="">🎯 選擇目的地 / 常用地點...</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- ── 3. Identity & State Selectors Matrix ─────────────────────────── -->
     <section class="selectors-panel">
       <!-- Identity Row -->
       <div class="selector-group">
-        <span class="group-label">交通身分 (Identity)</span>
+        <span class="group-label">交通身分 (Identity) — 自動儲存</span>
         <div class="capsule-row">
           <button class="capsule-btn active" data-identity="car">🚗 汽車駕駛</button>
           <button class="capsule-btn" data-identity="ev">⚡ 電動車 (EV)</button>
@@ -89,7 +106,7 @@
 
       <!-- State Row -->
       <div class="selector-group" style="margin-top: 14px;">
-        <span class="group-label">當前狀態與意圖 (State / Intent)</span>
+        <span class="group-label">當前狀態與意圖 (State / Intent) — 自動儲存</span>
         <div class="capsule-row">
           <button class="capsule-btn active" data-state="cruising">☕ 無目的地漫遊</button>
           <button class="capsule-btn" data-state="urgent">🚨 趕時間模式</button>
@@ -115,14 +132,28 @@
         <div id="situation-summary" class="situation-summary">周邊 1km 內各運具運行平穩，無重大事故通報。</div>
       </div>
 
-      <!-- Recommendations Card -->
+      <!-- Dynamic Context Action Card -->
       <div class="section-card">
         <div class="section-title">
           <span>🎯 行動決策建議</span>
+          <span id="dynamic-badge" style="font-size: 11px; color: var(--accent-cyan); font-weight:600;">🚗 漫遊模式</span>
         </div>
         <div id="recommendations-container">
           <div class="card-item">
             <div class="card-desc">正在向 Cloudflare Worker 擷取即時情境...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Destination Arrival Insight Card -->
+      <div id="dest-insight-card" class="section-card" style="border-left: 4px solid var(--accent-purple);">
+        <div class="section-title">
+          <span>🏁 目的地抵達即時洞察</span>
+          <span id="dest-badge" style="font-size: 11px; color: var(--accent-purple); font-weight:600;">停車 / 班次預告</span>
+        </div>
+        <div id="dest-insight-container">
+          <div class="card-item">
+            <div class="card-desc">正在分析目的地周邊資源...</div>
           </div>
         </div>
       </div>
@@ -176,23 +207,17 @@
       
       <div class="section-card">
         <div class="section-title">
-          <span>🗺️ 設定全旅程起訖點</span>
+          <span>🗺️ 全旅程情境導航規劃</span>
         </div>
 
         <div class="route-input-group">
           <div class="input-row">
             <label>出發地</label>
-            <input id="route-origin-name" class="input-text" type="text" value="我的目前位置" />
+            <input id="route-origin-name" class="input-text" type="text" readonly />
           </div>
           <div class="input-row">
             <label>目的地</label>
-            <input id="route-dest-name" class="input-text" type="text" value="台北車站" />
-          </div>
-          <div class="input-row">
-            <label>快速選</label>
-            <select id="route-dest-select" class="preset-select" style="flex:1;">
-              <option value="">🎯 選擇目的地熱點...</option>
-            </select>
+            <input id="route-dest-name" class="input-text" type="text" readonly />
           </div>
         </div>
 
@@ -219,7 +244,7 @@
   <div id="map-modal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">🗺️ 點擊地圖選擇位置</div>
+        <div id="map-modal-title" class="modal-title">🗺️ 點擊地圖選擇位置</div>
         <button id="btn-close-map" class="btn-close">&times;</button>
       </div>
       <div id="map-container"></div>
@@ -230,7 +255,31 @@
     </div>
   </div>
 
-  <!-- ── Modal 2: Token & API Settings ─────────────────────────────────── -->
+  <!-- ── Modal 2: Custom Favorites Management ──────────────────────────── -->
+  <div id="favorites-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">⭐️ 常用位置管理 (自訂別稱)</div>
+        <button id="btn-close-favs" class="btn-close">&times;</button>
+      </div>
+
+      <!-- Add New Favorite Form -->
+      <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px;">
+        <div style="font-size: 12px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">➕ 新增常用位置 (以當前選定出發地)</div>
+        <div style="display: flex; gap: 8px;">
+          <input id="input-new-fav-alias" class="input-text" type="text" placeholder="輸入別稱 (如: 🏠 家, 🏢 公司)" style="flex:1;" />
+          <button id="btn-add-fav" class="btn-primary" style="width: auto; padding: 0 16px;">儲存</button>
+        </div>
+      </div>
+
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600;">已儲存的常用地點列表：</div>
+      <div id="favorites-list-container">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal 3: Token & API Settings ─────────────────────────────────── -->
   <div id="settings-modal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -252,7 +301,7 @@
         <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px;">
           Cloudflare Worker 後端網址
         </label>
-        <input id="input-endpoint" class="input-text" type="text" placeholder="https://cf-mcp-playground.workers.dev" style="width: 100%;" />
+        <input id="input-endpoint" class="input-text" type="text" placeholder="https://cf-mcp-playground.tobywang2021.workers.dev" style="width: 100%;" />
       </div>
 
       <button id="btn-save-settings" class="btn-primary">儲存設定</button>

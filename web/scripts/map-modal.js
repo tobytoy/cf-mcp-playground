@@ -1,25 +1,30 @@
 /**
- * Leaflet.js Interactive Map Picker Modal
+ * Leaflet.js Interactive Map Picker Modal (Supports Origin, Destination, & Custom Favorites)
  */
 
 let mapInstance = null;
 let markerInstance = null;
+let currentCallback = null;
 let tempSelectedLocation = {
   latitude: 25.033964,
   longitude: 121.564468,
   name: "地圖選定位置",
 };
 
-export function initMapModal(onLocationSelected) {
+export function initMapModal(defaultCallback) {
   const modalEl = document.getElementById("map-modal");
+  const modalTitle = document.getElementById("map-modal-title");
   const closeBtn = document.getElementById("btn-close-map");
   const confirmBtn = document.getElementById("btn-confirm-map");
   const coordDisplay = document.getElementById("map-selected-coord");
 
-  function openMap(initialLat = 25.033964, initialLon = 121.564468) {
+  function openMap(initialLat = 25.033964, initialLon = 121.564468, title = "🗺️ 點擊地圖選擇位置", customCallback = null) {
     modalEl.classList.add("show");
-    tempSelectedLocation.latitude = initialLat;
-    tempSelectedLocation.longitude = initialLon;
+    if (modalTitle) modalTitle.textContent = title;
+    currentCallback = customCallback || defaultCallback;
+
+    tempSelectedLocation.latitude = Number(Number(initialLat).toFixed(6));
+    tempSelectedLocation.longitude = Number(Number(initialLon).toFixed(6));
 
     setTimeout(() => {
       if (!mapInstance && window.L) {
@@ -77,8 +82,8 @@ export function initMapModal(onLocationSelected) {
   });
 
   confirmBtn?.addEventListener("click", () => {
-    if (onLocationSelected) {
-      onLocationSelected({ ...tempSelectedLocation });
+    if (currentCallback) {
+      currentCallback({ ...tempSelectedLocation });
     }
     closeModal();
   });

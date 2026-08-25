@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   Transport Context AI — Glassmorphism Design System
+   Transport Context AI — Glassmorphism Design System (v2.2)
    ───────────────────────────────────────────────────────────────────────────── */
 
 :root {
@@ -16,6 +16,7 @@
   --accent-amber: #f59e0b;
   --accent-rose: #f43f5e;
   --accent-purple: #a855f7;
+  --accent-indigo: #6366f1;
 
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
@@ -77,13 +78,15 @@ body {
   gap: 10px;
 }
 
-.app-logo {
-  font-size: 24px;
-  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
+.app-logo-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
 }
 
 .app-title-group h1 {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   background: linear-gradient(135deg, #ffffff, #94a3b8);
   -webkit-background-clip: text;
@@ -91,7 +94,7 @@ body {
 }
 
 .app-title-group span {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--accent-cyan);
   font-weight: 600;
   text-transform: uppercase;
@@ -101,7 +104,7 @@ body {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 /* Role Badge */
@@ -111,7 +114,7 @@ body {
   gap: 6px;
   padding: 5px 12px;
   border-radius: var(--radius-full);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.5px;
   border: 1px solid transparent;
@@ -142,7 +145,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 6px 10px;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
@@ -162,8 +165,8 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
@@ -178,14 +181,18 @@ body {
   border-color: var(--accent-blue);
 }
 
-/* ── Location Toolbar ────────────────────────────────────────────────────── */
+/* ── Location Toolbar (Origin & Destination) ─────────────────────────────── */
 .location-panel {
   background: var(--bg-surface);
   backdrop-filter: var(--backdrop-blur);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 14px 18px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+}
+
+.location-panel.destination-theme {
+  border-left: 4px solid var(--accent-purple);
 }
 
 .location-header {
@@ -199,22 +206,37 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #ffffff;
+}
+
+.location-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+.location-tag.dest {
+  background: rgba(168, 85, 247, 0.2);
+  color: #d8b4fe;
 }
 
 .location-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .btn-location {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
+  gap: 5px;
+  padding: 5px 12px;
   font-size: 12px;
   font-weight: 600;
   background: rgba(59, 130, 246, 0.15);
@@ -230,6 +252,16 @@ body {
   color: #ffffff;
 }
 
+.btn-location.dest {
+  background: rgba(168, 85, 247, 0.15);
+  color: #d8b4fe;
+  border-color: rgba(168, 85, 247, 0.35);
+}
+
+.btn-location.dest:hover {
+  background: rgba(168, 85, 247, 0.3);
+}
+
 .preset-select {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
@@ -239,6 +271,7 @@ body {
   border-radius: var(--radius-full);
   cursor: pointer;
   outline: none;
+  max-width: 220px;
 }
 
 /* ── Selectors Matrix ────────────────────────────────────────────────────── */
@@ -247,7 +280,7 @@ body {
   backdrop-filter: var(--backdrop-blur);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 16px 18px;
+  padding: 14px 18px;
   margin-bottom: 16px;
 }
 
@@ -284,12 +317,12 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 7px 13px;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   border-radius: var(--radius-full);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
@@ -323,7 +356,7 @@ body {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   text-align: center;
   cursor: pointer;
@@ -370,7 +403,7 @@ body {
 }
 
 .situation-headline {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: #ffffff;
   margin-bottom: 6px;
@@ -401,8 +434,8 @@ body {
   color: var(--text-primary);
   margin-bottom: 12px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
 }
 
 .card-item {
@@ -430,6 +463,7 @@ body {
   margin-bottom: 4px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .card-desc {
@@ -465,7 +499,7 @@ body {
 }
 
 .metric-value {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   color: var(--accent-cyan);
   margin-bottom: 2px;
@@ -474,6 +508,57 @@ body {
 .metric-label {
   font-size: 11px;
   color: var(--text-muted);
+}
+
+/* ── Favorite List in Modal ──────────────────────────────────────────────── */
+.fav-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+}
+
+.fav-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fav-alias {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.fav-coord {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.fav-btn-group {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-small {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+}
+
+.btn-small.delete:hover {
+  background: rgba(244, 63, 94, 0.2);
+  color: #f87171;
+  border-color: #f87171;
 }
 
 /* ── Route Planning View ─────────────────────────────────────────────────── */
@@ -491,7 +576,7 @@ body {
 }
 
 .input-row label {
-  width: 50px;
+  width: 60px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
@@ -552,7 +637,9 @@ body {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 500px;
+  max-width: 520px;
+  max-height: 88vh;
+  overflow-y: auto;
   padding: 20px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
 }
