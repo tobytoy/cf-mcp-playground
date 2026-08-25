@@ -5,6 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>智慧交通情境感知 AI — Cloudflare MCP PWA</title>
   
+  <!-- SEO & AI Crawler Metadata -->
+  <meta name="description" content="智慧交通情境感知 AI — 結合台灣即時路況事件、停車位、EV充電、YouBike與大眾運輸的全旅程情境路徑決策引擎 (支援 Model Context Protocol / MCP 與 REST API)。" />
+  <meta name="keywords" content="MCP, Model Context Protocol, Cloudflare Workers, 交通情境感知, 路徑規劃, TDX, 即時路況, 停車位, 高鐵, 捷運, 公車, AI Agent" />
+  <meta name="author" content="Toby Wang" />
+
+  <!-- Open Graph & Social Cards -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="智慧交通情境感知 AI — Cloudflare MCP PWA" />
+  <meta property="og:description" content="結合台灣即時路況事件、停車位、EV充電、YouBike與大眾運輸的全旅程情境路徑決策引擎。" />
+  <meta property="og:image" content="./assets/icon.png" />
+  <meta property="og:url" content="https://tobytoy.github.io/cf-mcp-playground/" />
+
+  <!-- AI Agents & LLM Discovery Links -->
+  <link rel="alternate" type="text/plain" href="./llms.txt" title="LLM Context & MCP Specification" />
+  <meta name="ai-service" content="Cloudflare MCP Context-Aware Transportation Engine" />
+  <meta name="mcp-server-sse" content="https://cf-mcp-playground.tobywang2021.workers.dev/sse" />
+  <meta name="mcp-server-streamable-http" content="https://cf-mcp-playground.tobywang2021.workers.dev/mcp" />
+  <meta name="api-route" content="https://cf-mcp-playground.tobywang2021.workers.dev/api/transport/route" />
+
+  <!-- JSON-LD Structured Data for AI & Search Engines -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "智慧交通情境感知 AI (Cloudflare MCP)",
+    "url": "https://tobytoy.github.io/cf-mcp-playground/",
+    "description": "具備即時交通感知、動態路況過濾與多運具轉乘備援的全旅程決策引擎，支援 MCP 協議與 REST API。",
+    "applicationCategory": "TravelApplication",
+    "operatingSystem": "All",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "TWD"
+    },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://cf-mcp-playground.tobywang2021.workers.dev/api/transport/route",
+      "query-input": "required name=origin,destination,identity,urgency"
+    }
+  }
+  </script>
+  
   <!-- PWA & Mobile Web App Meta -->
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/png" href="./assets/icon.png" />
