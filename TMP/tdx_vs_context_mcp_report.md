@@ -206,6 +206,100 @@ AI 僅需調用一次 `plan_contextual_route`，Worker 立即並行計算並回�
 * **本專案 `cf-mcp-playground`** 則是建立在 TDX 之上的**「交通 AI 智能大腦與體驗交付層」**。
 * 透過本專案，任何 AI 客戶端（Claude、Cursor、ChatGPT）都能在**「極低 Token 成本、毫秒級邊緣快取響應」**的前提下，為全台灣的使用者提供最貼心、最精準的跨運具全旅程交通決策！
 
+
 ### 🚀 未來演進路線：
 1. **即時天氣雷達整合**：結合 CWA 氣象即時降雨雷達，當起點或終點偵測到降雨時，自動在路徑規劃中提示「建議攜帶雨具」或自動切換大眾運輸方案。
 2. **多語系國際化支援**：支援英語、日語、韓語輸出，讓外國觀光客在台灣也能透過 ChatGPT 無障礙搭乘雙鐵、公車與 YouBike。
+3. **Cloudflare Durable Objects 升級**：Rate Limiting 從 KV 進一步升級為 DO，取得更精確的 per-request 強一致性計數，適合未來高流量場景。
+
+---
+
+## 7. 本專案優化紀錄（2026 年 8 月版本更新）
+
+> 本章節記錄本報告發布後執行的系統性技術優化，供未來維運與二次開發參考。
+
+### 🔐 安全性強化
+
+| 項目 | 優化前 | 優化後 |
+| :--- | :--- | :--- |
+| **Token 驗證機制** | 允許 `startsWith("dev_")` / `startsWith("vip_")` 前綴自動升級 | ✅ 嚴格 exact-match，任何前綴猜測皆視為 Guest |
+| **Rate Limit 儲存** | In-Memory Map（Worker 重啟即清空，跨 Instance 無效） | ✅ Cloudflare KV-backed（全球一致、持久化、支援 TTL 過期） |
+
+**核心安全改動（[`src/middlewares/auth.ts`](https://github.com/tobytoy/cf-mcp-playground/blob/main/src/middlewares/auth.ts)）：**
+- 移除 `token.startsWith("dev_")` 自動升級邏輯，杜絕權限偽冒。
+- Dev role 直接快速路徑 bypass 任何 KV 讀寫（無限制無額外延遲）。
+- Guest / VIP 限流狀態改由 `CACHE_KV.put()` 跨 Instance 持久化，TTL 設為當天末 + 1 小時緩衝。
+
+---
+
+### 🗄️ 快取架構升級
+
+**新增 KVCache 實作（[`src/services/cache.ts`](https://github.com/tobytoy/cf-mcp-playground/blob/main/src/services/cache.ts)）：**
+
+```
+Cache 優先順序：Cloudflare KV → Redis（本地）→ In-Memory（降級）
+```
+
+| 快取層 | 適用場景 | 特性 |
+| :--- | :--- | :--- |
+| **Cloudflare KV** | Workers 生產環境 | 全球複製、跨 Instance 共享、TTL 原生支援 |
+| **Redis** | 本地 / 自架伺服器 | 高速、支援 LuaScript |
+| **In-Memory** | 本地開發 | 無需外部依賴，重啟即清 |
+
+`wrangler.jsonc` 已加入 KV binding：
+```json
+"kv_namespaces": [
+  {
+    "binding": "CACHE_KV",
+    "id": "b5362d3124cd4b46b53b52dbcc35079d",
+    "preview_id": "6a3c5e83ca6e4150885aa809460c3547"
+  }
+]
+```
+
+---
+
+### 🌐 TDX 真實資料串接（4 支 API 補完）
+
+優化前有 4 支資料方法為 hardcode mock，不論 TDX 憑證是否存在均回傳固定假資料；優化後改為「有憑證時呼叫真實 API，失敗或開發環境才 fallback mock」：
+
+| 方法 | 優化前 | 優化後 | TDX 端點 |
+| :--- | :--- | :--- | :--- |
+| `getNearbyEVChargers` | 固定 2 個假充電站 | ✅ 真實充電槍數量與規格 | `/v2/EnergyStation/EVCharger/City/{city}` |
+| `getTrafficIncidents` | 固定「基隆路施工」假事件 | ✅ 真實事件，無事件回空陣列 | `/v2/Road/Alert/City/{city}` |
+| `getBusEstimatedArrival` | 固定 307 公車 3 分鐘 | ✅ 真實 ETA，支援站名過濾 | `/v2/Bus/EstimatedTimeOfArrival/City/{city}/{route}` |
+| `getRailLiveBoard` | 固定台北車站兩班列車 | ✅ 真實班次與延誤分鐘 | `/v2/Rail/TRA/LiveBoard/Station/{id}` 及 THSR |
+
+---
+
+### 🗺️ 全台城市判斷擴充（`guessTaiwanCity`）
+
+優化前僅覆蓋 7 個城市，導致宜蘭、花蓮、台東、基隆、嘉義、屏東、澎湖等地的使用者全部 fallback 到台北，API 呼叫錯誤城市端點。
+
+優化後：**擴充至全台 22 縣市**，包含金門、馬祖、澎湖離島邊界。
+
+---
+
+### ✅ MCP 工具輸入驗證（`get_transport_context` 等 8 支工具）
+
+新增集中式輸入驗證（[`src/mcp/server.ts`](https://github.com/tobytoy/cf-mcp-playground/blob/main/src/mcp/server.ts)）：
+
+- `requireLatLon()`：驗證緯度 -90~90、經度 -180~180，非數值立即返回結構化錯誤。
+- `requireString()`：驗證必填字串欄位不為空。
+- Enum 白名單檢查：`identity`、`state`、`rail_type` 均驗證是否在允許集合內。
+- 全體工具 handler 包覆 `try/catch`，任何下游例外均以 `isError: true` 結構化回傳，不崩潰整個 Worker。
+
+**對 AI 客戶端的改善**：AI 傳入錯誤參數時，現在會收到友善的中文錯誤訊息（如「❌ 輸入驗證錯誤：identity 必須為 car / ev / scooter / ...」），而非原本的 500 錯誤或靜默失敗。
+
+---
+
+### 📊 優化成果總覽
+
+| 優化面向 | 修正數量 | 代表效益 |
+| :--- | :---: | :--- |
+| 安全性漏洞修補 | 2 項 | 杜絕 Token 偽冒，Rate Limit 真正有效 |
+| 快取持久化 | 1 套 | TDX Token 與 Geo-Grid 快取跨 Instance 共享 |
+| 真實 API 串接 | 4 支 | EV 充電站、交通事故、公車、雙鐵回傳真實資料 |
+| 城市覆蓋擴充 | 7 → 22 城市 | 全台用戶資料準確性大幅提升 |
+| 輸入驗證與錯誤處理 | 8 工具 | AI 客戶端獲得友善中文錯誤回饋 |
+

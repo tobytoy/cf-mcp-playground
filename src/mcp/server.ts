@@ -282,22 +282,53 @@ export function createMCPServer(options?: { cacheService?: CacheService; env?: A
     ],
   }));
 
-  // ── Call Tool Handler ─────────────────────────────────────────────────────
+
+// ── Input Validation Helpers ────────────────────────────────────────────────
+
+const VALID_IDENTITIES = new Set(["car", "ev", "scooter", "bike", "transit", "pedestrian", "multimodal"]);
+const VALID_STATES = new Set(["cruising", "urgent", "commute_in", "commute_out", "transit_transfer", "rain_fallback"]);
+const VALID_RAIL_TYPES = new Set(["tra", "thsr", "metro"]);
+
+function requireLatLon(args: Record<string, unknown>, prefix = ""): { lat: number; lon: number } {
+  const latKey = prefix ? `${prefix}_latitude` : "latitude";
+  const lonKey = prefix ? `${prefix}_longitude` : "longitude";
+  const lat = Number(args[latKey] ?? (args[prefix] as any)?.latitude);
+  const lon = Number(args[lonKey] ?? (args[prefix] as any)?.longitude);
+  if (isNaN(lat) || lat < -90 || lat > 90) throw new Error(`緯度 (latitude) 不合法：${args[latKey]}，請提供 -90 ~ 90 之間的數值。`);
+  if (isNaN(lon) || lon < -180 || lon > 180) throw new Error(`經度 (longitude) 不合法：${args[lonKey]}，請提供 -180 ~ 180 之間的數值。`);
+  return { lat, lon };
+}
+
+function requireString(args: Record<string, unknown>, key: string, label: string): string {
+  const val = String(args[key] ?? "").trim();
+  if (!val) throw new Error(`缺少必填欄位「${label}」(${key})，請提供有效的字串值。`);
+  return val;
+}
+
+function toolError(message: string) {
+  return { isError: true, content: [{ type: "text" as const, text: `❌ 輸入驗證錯誤：${message}` }] };
+}
+
+// ── Call Tool Handler ─────────────────────────────────────────────────────
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;
 
+    try {
+
     // 1. get_transport_context
     if (name === "get_transport_context") {
-      const identity = args.identity as TransportIdentity;
-      const state = args.state as TransportState;
-      const lat = Number(args.latitude);
-      const lon = Number(args.longitude);
+      const identity = requireString(args, "identity", "交通身分");
+      if (!VALID_IDENTITIES.has(identity)) return toolError(`identity 必須為 ${[...VALID_IDENTITIES].join(" / ")} 其中之一，收到：「${identity}」`);
+      const state = requireString(args, "state", "當前狀態");
+      if (!VALID_STATES.has(state)) return toolError(`state 必須為 ${[...VALID_STATES].join(" / ")} 其中之一，收到：「${state}」`);
+      const { lat, lon } = requireLatLon(args);
       const radius = args.radius_meters ? Number(args.radius_meters) : 800;
+
 
       const result = await evaluateTransportContext(
         tdxClient,
-        identity,
-        state,
+        identity as TransportIdentity,
+        state as TransportState,
         { latitude: lat, longitude: lon, name: args.location_name as string },
         { radiusMeters: radius }
       );
@@ -341,8 +372,7 @@ export function createMCPServer(options?: { cacheService?: CacheService; env?: A
 
     // 3. get_nearby_parking
     if (name === "get_nearby_parking") {
-      const lat = Number(args.latitude);
-      const lon = Number(args.longitude);
+      const { lat, lon } = requireLatLon(args);
       const radius = args.radius_meters ? Number(args.radius_meters) : 800;
       const result = await tdxClient.getNearbyParking(lat, lon, radius);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
@@ -350,8 +380,7 @@ export function createMCPServer(options?: { cacheService?: CacheService; env?: A
 
     // 4. get_nearby_ev_chargers
     if (name === "get_nearby_ev_chargers") {
-      const lat = Number(args.latitude);
-      const lon = Number(args.longitude);
+      const { lat, lon } = requireLatLon(args);
       const radius = args.radius_meters ? Number(args.radius_meters) : 1500;
       const result = await tdxClient.getNearbyEVChargers(lat, lon, radius);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
@@ -359,8 +388,7 @@ export function createMCPServer(options?: { cacheService?: CacheService; env?: A
 
     // 5. get_nearby_youbike
     if (name === "get_nearby_youbike") {
-      const lat = Number(args.latitude);
-      const lon = Number(args.longitude);
+      const { lat, lon } = requireLatLon(args);
       const radius = args.radius_meters ? Number(args.radius_meters) : 800;
       const result = await tdxClient.getNearbyYouBike(lat, lon, radius);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
@@ -369,16 +397,18 @@ export function createMCPServer(options?: { cacheService?: CacheService; env?: A
     // 6. get_traffic_incidents
     if (name === "get_traffic_incidents") {
       const city = (args.city as string) || "Taipei";
-      const lat = args.latitude ? Number(args.latitude) : undefined;
-      const lon = args.longitude ? Number(args.longitude) : undefined;
+      const lat = args.latitude !== undefined ? Number(args.latitude) : undefined;
+      const lon = args.longitude !== undefined ? Number(args.longitude) : undefined;
+      if (lat !== undefined && (isNaN(lat) || lat < -90 || lat > 90)) return toolError(`緯度不合法：${args.latitude}`);
+      if (lon !== undefined && (isNaN(lon) || lon < -180 || lon > 180)) return toolError(`經度不合法：${args.longitude}`);
       const result = await tdxClient.getTrafficIncidents(city, lat, lon);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
 
     // 7. get_bus_estimated_arrival
     if (name === "get_bus_estimated_arrival") {
+      const routeName = requireString(args, "route_name", "公車路線號碼");
       const city = (args.city as string) || "Taipei";
-      const routeName = args.route_name as string;
       const stopName = args.stop_name as string | undefined;
       const result = await tdxClient.getBusEstimatedArrival(city, routeName, stopName);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
@@ -387,7 +417,8 @@ export function createMCPServer(options?: { cacheService?: CacheService; env?: A
     // 8. get_rail_live_board
     if (name === "get_rail_live_board") {
       const stationId = (args.station_id as string) || "1000";
-      const railType = (args.rail_type as "tra" | "thsr" | "metro") || "tra";
+      const railType = ((args.rail_type as string) || "tra") as "tra" | "thsr" | "metro";
+      if (!VALID_RAIL_TYPES.has(railType)) return toolError(`rail_type 必須為 tra / thsr / metro 其中之一，收到：「${railType}」`);
       const result = await tdxClient.getRailLiveBoard(stationId, railType);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
@@ -440,7 +471,7 @@ export function createMCPServer(options?: { cacheService?: CacheService; env?: A
           content: [
             {
               type: "text",
-              text: `⚡ **[Redis 快取直接命中 (Cache HIT)]**\n⏱️ 響應時間: ${Date.now() - startTime}ms | 原提問: 「${parsed.originalQuestion}」 | 快取建立時間: ${parsed.cachedAt}\n\n${parsed.answer}`,
+              text: `⚡ **[KV 快取命中 (Cache HIT)]**\n⏱️ 響應時間: ${Date.now() - startTime}ms | 原提問: 「${parsed.originalQuestion}」 | 快取建立時間: ${parsed.cachedAt}\n\n${parsed.answer}`,
             },
           ],
         };
@@ -454,7 +485,7 @@ export function createMCPServer(options?: { cacheService?: CacheService; env?: A
         content: [
           {
             type: "text",
-            text: `💾 **[新問題生成並已快取至 Redis (Cache MISS)]**\n⏱️ 處理時間: ${Date.now() - startTime}ms | 快取鍵: \`${cacheKey}\`\n\n${answer}`,
+            text: `💾 **[新問題生成並已快取至 KV (Cache MISS)]**\n⏱️ 處理時間: ${Date.now() - startTime}ms | 快取鍵: \`${cacheKey}\`\n\n${answer}`,
           },
         ],
       };
@@ -478,6 +509,11 @@ export function createMCPServer(options?: { cacheService?: CacheService; env?: A
     }
 
     return { isError: true, content: [{ type: "text", text: `未知的工具名稱: ${name}` }] };
+
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { isError: true, content: [{ type: "text" as const, text: `❌ 工具執行失敗：${message}` }] };
+    }
   });
 
   // ── Resources ─────────────────────────────────────────────────────────────
