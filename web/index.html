@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>智慧交通情境感知 AI — Cloudflare MCP PWA</title>
+  
+  <!-- PWA & Mobile Web App Meta -->
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#0b0f19" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="交通情境AI" />
+  
+  <!-- Google Fonts & Leaflet CSS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  
+  <!-- Custom Glassmorphism Styles -->
+  <link rel="stylesheet" href="./styles/main.css" />
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- ── Top Header Bar ────────────────────────────────────────────────── -->
+    <header class="header-bar">
+      <div class="app-brand">
+        <span class="app-logo">🚦</span>
+        <div class="app-title-group">
+          <h1>交通情境感知 AI</h1>
+          <span>Cloudflare MCP Edge Engine</span>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <!-- Role Badge -->
+        <div id="role-badge" class="role-badge guest" title="點擊切換或設定 Token">
+          🟢 Guest (60s)
+        </div>
+
+        <!-- Timer & Manual Refresh -->
+        <div id="timer-pill" class="timer-pill" title="點擊立即手動刷新">
+          <span>⏱️</span>
+          <span id="timer-text">60s</span>
+        </div>
+
+        <button id="btn-manual-refresh" class="btn-icon" title="手動更新">🔄</button>
+        <button id="btn-open-settings" class="btn-icon" title="設定 Token 與 API">⚙️</button>
+      </div>
+    </header>
+
+    <!-- ── Location Toolbar ──────────────────────────────────────────────── -->
+    <section class="location-panel">
+      <div class="location-header">
+        <div class="location-info">
+          <span>📍</span>
+          <span id="current-location-text">台北101商圈 (25.033964, 121.564468)</span>
+        </div>
+      </div>
+      <div class="location-actions">
+        <button id="btn-gps" class="btn-location">🎯 我的 GPS 位置</button>
+        <button id="btn-open-map" class="btn-location">🗺️ 地圖選點</button>
+        <select id="preset-location-select" class="preset-select">
+          <option value="">📍 常用熱門商圈快速選取...</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- ── Identity & State Selectors Matrix ─────────────────────────────── -->
+    <section class="selectors-panel">
+      <!-- Identity Row -->
+      <div class="selector-group">
+        <span class="group-label">交通身分 (Identity)</span>
+        <div class="capsule-row">
+          <button class="capsule-btn active" data-identity="car">🚗 汽車駕駛</button>
+          <button class="capsule-btn" data-identity="ev">⚡ 電動車 (EV)</button>
+          <button class="capsule-btn" data-identity="scooter">🛵 機車族</button>
+          <button class="capsule-btn" data-identity="bike">🚲 YouBike / 單車</button>
+          <button class="capsule-btn" data-identity="transit">🚇 捷運 / 公車通勤</button>
+          <button class="capsule-btn" data-identity="pedestrian">🚶 步行 / 無障礙</button>
+        </div>
+      </div>
+
+      <!-- State Row -->
+      <div class="selector-group" style="margin-top: 14px;">
+        <span class="group-label">當前狀態與意圖 (State / Intent)</span>
+        <div class="capsule-row">
+          <button class="capsule-btn active" data-state="cruising">☕ 無目的地漫遊</button>
+          <button class="capsule-btn" data-state="urgent">🚨 趕時間模式</button>
+          <button class="capsule-btn" data-state="commute_in">💼 通勤上班 (進城)</button>
+          <button class="capsule-btn" data-state="commute_out">🏠 下班返家 (離城)</button>
+          <button class="capsule-btn" data-state="rain_fallback">🌧️ 雨天避難模式</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Navigation Tabs ───────────────────────────────────────────────── -->
+    <nav class="nav-tabs">
+      <div class="nav-tab active" data-target="view-live">📊 即時情報看板</div>
+      <div class="nav-tab" data-target="view-route">🧭 情境全旅程導航</div>
+    </nav>
+
+    <!-- ── Tab 1: Live Context View ──────────────────────────────────────── -->
+    <main id="view-live" class="view-content active">
+      
+      <!-- Situation Banner -->
+      <div id="situation-banner" class="situation-banner normal">
+        <div id="situation-headline" class="situation-headline">✨ 交通狀況順暢</div>
+        <div id="situation-summary" class="situation-summary">周邊 1km 內各運具運行平穩，無重大事故通報。</div>
+      </div>
+
+      <!-- Recommendations Card -->
+      <div class="section-card">
+        <div class="section-title">
+          <span>🎯 行動決策建議</span>
+        </div>
+        <div id="recommendations-container">
+          <div class="card-item">
+            <div class="card-desc">正在向 Cloudflare Worker 擷取即時情境...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enroute & Road Risks -->
+      <div class="section-card">
+        <div class="section-title">
+          <span>⚠️ 突發事件與風險警報</span>
+        </div>
+        <div id="risks-container">
+          <div class="card-item">
+            <div class="card-desc">✅ 周邊 1km 內無施工、事故或車位枯竭警報。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="section-card">
+        <div class="section-title">
+          <span>⚡ 即時路網指標</span>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <div id="metric-parking" class="metric-value">—</div>
+            <div class="metric-label">周邊可用車位</div>
+          </div>
+          <div class="metric-box">
+            <div id="metric-youbike" class="metric-value">—</div>
+            <div class="metric-label">YouBike 可借車</div>
+          </div>
+          <div class="metric-box">
+            <div id="metric-ev" class="metric-value">—</div>
+            <div class="metric-label">可用快充槍</div>
+          </div>
+          <div class="metric-box">
+            <div id="metric-congestion" class="metric-value">順暢</div>
+            <div class="metric-label">道路壅塞指數</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assistant Footer Note -->
+      <div id="assistant-note" style="text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 14px;">
+        💬 AI 交通小秘書：為您持續守護路況動態中...
+      </div>
+
+    </main>
+
+    <!-- ── Tab 2: Route Planning View ────────────────────────────────────── -->
+    <main id="view-route" class="view-content">
+      
+      <div class="section-card">
+        <div class="section-title">
+          <span>🗺️ 設定全旅程起訖點</span>
+        </div>
+
+        <div class="route-input-group">
+          <div class="input-row">
+            <label>出發地</label>
+            <input id="route-origin-name" class="input-text" type="text" value="我的目前位置" />
+          </div>
+          <div class="input-row">
+            <label>目的地</label>
+            <input id="route-dest-name" class="input-text" type="text" value="台北車站" />
+          </div>
+          <div class="input-row">
+            <label>快速選</label>
+            <select id="route-dest-select" class="preset-select" style="flex:1;">
+              <option value="">🎯 選擇目的地熱點...</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="btn-plan-route" class="btn-primary">🧭 開始全旅程情境規劃</button>
+      </div>
+
+      <!-- Route Plan Result -->
+      <div class="section-card">
+        <div class="section-title">
+          <span>📋 AI 情境導航策略報告</span>
+        </div>
+        <div id="route-result-container">
+          <div class="card-item">
+            <div class="card-desc">點擊上方「開始全旅程情境規劃」即可產生結合即時車位與施工避讓之專屬策略。</div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- ── Modal 1: Leaflet Interactive Map Picker ───────────────────────── -->
+  <div id="map-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">🗺️ 點擊地圖選擇位置</div>
+        <button id="btn-close-map" class="btn-close">&times;</button>
+      </div>
+      <div id="map-container"></div>
+      <div id="map-selected-coord" style="font-size: 12px; color: var(--accent-cyan); margin-bottom: 12px; font-weight:600;">
+        緯度: 25.033964, 經度: 121.564468
+      </div>
+      <button id="btn-confirm-map" class="btn-primary">確認選定此位置</button>
+    </div>
+  </div>
+
+  <!-- ── Modal 2: Token & API Settings ─────────────────────────────────── -->
+  <div id="settings-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">⚙️ API Key 與後端設定</div>
+        <button id="btn-close-settings" class="btn-close">&times;</button>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px;">
+          身份 Token (Dev / VIP Key)
+        </label>
+        <input id="input-token" class="input-text" type="text" placeholder="例如: vip_friend_alex 或 dev_xxx" style="width: 100%;" />
+        <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">
+          留空則自動以 Guest 訪客身分運行 (60s 限流)。
+        </span>
+      </div>
+
+      <div style="margin-bottom: 18px;">
+        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px;">
+          Cloudflare Worker 後端網址
+        </label>
+        <input id="input-endpoint" class="input-text" type="text" placeholder="https://cf-mcp-playground.workers.dev" style="width: 100%;" />
+      </div>
+
+      <button id="btn-save-settings" class="btn-primary">儲存設定</button>
+    </div>
+  </div>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Main Application Script -->
+  <script type="module" src="./scripts/app.js"></script>
+</body>
+</html>

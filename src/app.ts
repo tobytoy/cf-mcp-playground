@@ -2,42 +2,76 @@ import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { createMCPServer } from "./mcp/server.js";
 import { createCacheService } from "./services/cache.js";
+import { TDXClient } from "./services/tdx/client.js";
+import { evaluateTransportContext } from "./services/context/evaluator.js";
+import { planContextualRoute } from "./services/context/router.js";
+import { createAuthMiddleware, type UserRole } from "./middlewares/auth.js";
 import { MCP_KNOWLEDGE_BASE, searchTopics } from "./knowledge/mcp-data.js";
 import { buildCacheKey } from "./utils/hash.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { AppEnv } from "./types/env.js";
+import type { TransportIdentity, TransportState } from "./types/context.js";
 
-export type McpApp = Hono<{ Bindings: AppEnv }>;
+export type McpApp = Hono<{ Bindings: AppEnv; Variables: { userRole: UserRole; token?: string } }>;
 
 export function createApp(envBindings?: AppEnv): McpApp {
   // Cache is created once per app instance — no module-level singleton
   const cache = createCacheService(envBindings);
+  const tdxClient = new TDXClient(
+    {
+      clientId: envBindings?.TDX_CLIENT_ID,
+      clientSecret: envBindings?.TDX_CLIENT_SECRET,
+      apiBaseUrl: envBindings?.TDX_BASE_URL,
+    },
+    cache
+  );
 
-  const app: McpApp = new Hono<{ Bindings: AppEnv }>();
+  const app: McpApp = new Hono<{ Bindings: AppEnv; Variables: { userRole: UserRole; token?: string } }>();
 
+  // ── CORS Middleware ───────────────────────────────────────────────────────
   app.use(
     "*",
     cors({
       origin: "*",
       allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowHeaders: ["Content-Type", "Accept", "Authorization", "X-Session-Id", "mcp-session-id"],
-      exposeHeaders: ["Content-Type", "mcp-session-id"],
+      allowHeaders: [
+        "Content-Type",
+        "Accept",
+        "Authorization",
+        "X-API-Key",
+        "X-Session-Id",
+        "mcp-session-id",
+      ],
+      exposeHeaders: [
+        "Content-Type",
+        "mcp-session-id",
+        "X-User-Role",
+        "X-RateLimit-Cooldown",
+        "X-RateLimit-Remaining-Today",
+      ],
     })
   );
 
-  // ── Status dashboard ──────────────────────────────────────────────────────
+  // ── Status dashboard (Public) ─────────────────────────────────────────────
   app.get("/", async (c) => {
     const stats = await cache.getStats();
     return c.json({
-      service: "Cloudflare Worker & Docker MCP Service",
+      service: "Cloudflare Worker Context-Aware Transportation MCP Service",
       status: "running",
-      version: "1.0.0",
-      description: "MCP Server with Redis Caching and MCP Skills Knowledge Base",
+      version: "2.1.0",
+      description: "Edge Context-Aware Transportation Inference Engine & Multimodal Journey Planning on Cloudflare Workers",
+      authModes: {
+        dev: "Unlimited (0s cooldown, full debug)",
+        vip: "High-Frequency (15s cooldown, 1000 req/day)",
+        guest: "Standard (60s cooldown, 60 req/day by IP)",
+      },
       endpoints: {
-        mcp: "/mcp (Streamable HTTP / SSE MCP Endpoint)",
+        mcp: "/mcp (Streamable HTTP / SSE MCP Protocol Endpoint)",
         sse: "/sse (SSE Transport Endpoint)",
+        transportContextApi: "POST /api/transport/context",
+        transportRouteApi: "POST /api/transport/route",
+        authStatusApi: "GET /api/auth/status",
         askApi: "POST /api/ask { question: string }",
-        conceptsApi: "GET /api/concepts",
         cacheStats: "GET /api/cache/stats",
         health: "GET /health",
       },
@@ -49,12 +83,17 @@ export function createApp(envBindings?: AppEnv): McpApp {
         misses: stats.misses,
       },
       availableTools: [
+        "get_transport_context",
+        "plan_contextual_route",
+        "get_nearby_parking",
+        "get_nearby_ev_chargers",
+        "get_nearby_youbike",
+        "get_traffic_incidents",
+        "get_bus_estimated_arrival",
+        "get_rail_live_board",
         "explain_mcp_skill",
         "get_mcp_quickstart",
-        "list_mcp_concepts",
         "ask_mcp_assistant",
-        "get_cache_stats",
-        "clear_mcp_cache",
       ],
     });
   });
@@ -62,6 +101,114 @@ export function createApp(envBindings?: AppEnv): McpApp {
   app.get("/health", async (c) => {
     const stats = await cache.getStats();
     return c.json({ status: "healthy", timestamp: new Date().toISOString(), cache: stats });
+  });
+
+  // ── Auth Status Endpoint ──────────────────────────────────────────────────
+  app.get("/api/auth/status", async (c) => {
+    const devKey = c.env?.DEV_SECRET_KEY || "dev_local_secret";
+    const vipKeysList = (c.env?.VIP_SECRET_KEYS || "vip_default,vip_friends")
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean);
+
+    const authHeader = c.req.header("Authorization");
+    const token = (
+      authHeader?.startsWith("Bearer ")
+        ? authHeader.slice(7).trim()
+        : c.req.header("X-API-Key") || c.req.query("token")
+    )?.trim();
+
+    let role: UserRole = "guest";
+    if (token) {
+      if (token === devKey || token.startsWith("dev_")) {
+        role = "dev";
+      } else if (vipKeysList.includes(token) || token.startsWith("vip_")) {
+        role = "vip";
+      }
+    }
+
+    return c.json({
+      role,
+      authenticated: role !== "guest",
+      cooldownSeconds: role === "dev" ? 0 : role === "vip" ? 15 : 60,
+      dailyQuota: role === "dev" ? 999999 : role === "vip" ? 1000 : 60,
+      tokenProvided: !!token,
+      message:
+        role === "dev"
+          ? "⚡ 開發者模式：無頻率與配額限制"
+          : role === "vip"
+          ? "💎 VIP 會員模式：高頻 15 秒更新與專屬情境路徑規劃"
+          : "🟢 訪客模式：每 60 秒可刷新 1 次，若需高頻更新請輸入 VIP/Dev Token",
+    });
+  });
+
+  // ── Apply Auth & Rate Limit to Protected Endpoints ────────────────────────
+  const authMiddleware = createAuthMiddleware();
+
+  app.use("/api/transport/*", authMiddleware);
+  app.use("/mcp", authMiddleware);
+  app.use("/sse", authMiddleware);
+  app.use("/message", authMiddleware);
+
+  // ── REST: Transport Context & Route APIs ──────────────────────────────────
+  app.post("/api/transport/context", async (c) => {
+    try {
+      const body = await c.req.json<{
+        identity?: TransportIdentity;
+        state?: TransportState;
+        latitude?: number;
+        longitude?: number;
+        location_name?: string;
+        radius_meters?: number;
+      }>();
+
+      const identity = body.identity || "car";
+      const state = body.state || "cruising";
+      const lat = body.latitude ?? 25.033964;
+      const lon = body.longitude ?? 121.564468;
+      const radius = body.radius_meters ?? 800;
+
+      const result = await evaluateTransportContext(
+        tdxClient,
+        identity,
+        state,
+        { latitude: lat, longitude: lon, name: body.location_name },
+        { radiusMeters: radius }
+      );
+
+      return c.json(result);
+    } catch (err: unknown) {
+      return c.json({ error: err instanceof Error ? err.message : "Internal Error" }, 500);
+    }
+  });
+
+  app.post("/api/transport/route", async (c) => {
+    try {
+      const body = await c.req.json<{
+        origin: { latitude: number; longitude: number; name?: string };
+        destination: { latitude: number; longitude: number; name?: string };
+        identity?: TransportIdentity | "multimodal";
+        urgency?: "normal" | "high" | "relaxed";
+        preferences?: any;
+      }>();
+
+      if (!body.origin || !body.destination) {
+        return c.json({ error: "Missing origin or destination coordinates" }, 400);
+      }
+
+      const result = await planContextualRoute(
+        tdxClient,
+        body.origin,
+        body.destination,
+        body.identity || "car",
+        body.urgency || "normal",
+        body.preferences || {}
+      );
+
+      return c.json(result);
+    } catch (err: unknown) {
+      return c.json({ error: err instanceof Error ? err.message : "Internal Error" }, 500);
+    }
   });
 
   // ── REST: ask with caching ────────────────────────────────────────────────
@@ -118,7 +265,7 @@ export function createApp(envBindings?: AppEnv): McpApp {
   // ── MCP protocol handler (stateless per-request transport) ───────────────
   const handleMcp = async (c: Context) => {
     try {
-      const server = createMCPServer({ cacheService: cache });
+      const server = createMCPServer({ cacheService: cache, env: c.env as AppEnv });
       const transport = new WebStandardStreamableHTTPServerTransport({
         keepAliveMs: 0,
         enableJsonResponse: true,
