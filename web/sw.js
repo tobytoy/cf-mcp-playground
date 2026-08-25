@@ -12,6 +12,8 @@ const ASSETS = [
   "./scripts/location.js",
   "./scripts/map-modal.js",
   "./manifest.json",
+  "./assets/icon.svg",
+  "./assets/icon.png",
 ];
 
 self.addEventListener("install", (event) => {

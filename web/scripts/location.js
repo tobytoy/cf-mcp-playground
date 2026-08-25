@@ -30,7 +30,7 @@ export function setCurrentLocation(loc) {
 /**
  * Request device GPS position using HTML5 Geolocation API.
  */
-export function requestGpsPosition(): Promise<{ latitude: number; longitude: number; name: string }> {
+export function requestGpsPosition() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       return reject(new Error("您的瀏覽器或裝置不支援 GPS 定位功能。"));
