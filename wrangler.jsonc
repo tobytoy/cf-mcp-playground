@@ -15,8 +15,8 @@
   "kv_namespaces": [
     {
       "binding": "CACHE_KV",
-      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID",
-      "preview_id": "REPLACE_WITH_YOUR_KV_PREVIEW_NAMESPACE_ID"
+      "id": "b5362d3124cd4b46b53b52dbcc35079d",
+      "preview_id": "6a3c5e83ca6e4150885aa809460c3547"
     }
   ]
 }
