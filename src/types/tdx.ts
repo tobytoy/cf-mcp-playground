@@ -96,5 +96,5 @@ export interface TDXRailLiveBoard {
   ScheduledDepartureTime: string;
   DelayMinutes: number;
   Platform?: string;
-  TripStatus: "on_time" | "delayed" | "cancelled";
+  TripStatus: "on_time" | "delayed" | "cancelled" | "unknown";
 }

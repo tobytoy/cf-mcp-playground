@@ -188,10 +188,73 @@ export class RedisCache implements CacheService {
 }
 
 /**
+ * KVCache — Cloudflare KV-backed cache (preferred in Workers production).
+ * Provides cross-instance, globally replicated caching with TTL support.
+ */
+export class KVCache implements CacheService {
+  private kv: KVNamespace;
+  private hits = 0;
+  private misses = 0;
+
+  constructor(kv: KVNamespace) {
+    this.kv = kv;
+  }
+
+  async get(key: string): Promise<string | null> {
+    try {
+      const val = await this.kv.get(key);
+      if (val !== null) { this.hits++; return val; }
+      this.misses++;
+      return null;
+    } catch (err) {
+      console.warn(`[KVCache] get error for key "${key}":`, err);
+      this.misses++;
+      return null;
+    }
+  }
+
+  async set(key: string, value: string, ttlSeconds = 86400): Promise<void> {
+    try {
+      await this.kv.put(key, value, { expirationTtl: Math.max(60, ttlSeconds) });
+    } catch (err) {
+      console.warn(`[KVCache] set error for key "${key}":`, err);
+    }
+  }
+
+  async delete(key: string): Promise<boolean> {
+    try {
+      await this.kv.delete(key);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async clear(): Promise<void> {
+    // KV does not support bulk-delete; this is a no-op in production.
+    console.warn("[KVCache] clear() is a no-op on Cloudflare KV.");
+  }
+
+  async getStats(): Promise<CacheStats> {
+    return {
+      hits: this.hits,
+      misses: this.misses,
+      keysCount: -1, // KV list is expensive; skipped
+      type: "memory" as const, // reuse type; KV not a separate enum value
+      connected: true,
+    };
+  }
+}
+
+/**
  * Create a cache instance from env bindings — no global singleton,
  * callers own the lifetime of the returned service.
+ *
+ * Priority: Cloudflare KV → Redis (URL) → Redis (host) → In-Memory
  */
 export function createCacheService(env?: AppEnv): CacheService {
+  if (env?.CACHE_KV) return new KVCache(env.CACHE_KV as KVNamespace);
+
   const redisUrl = env?.REDIS_URL;
   const redisHost = env?.REDIS_HOST;
 

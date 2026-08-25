@@ -4,6 +4,10 @@
  * - 'dev': Unlimited requests, 0 cooldown
  * - 'vip': High-frequency refresh (15s cooldown), priority access
  * - 'guest': Standard rate limit (60s cooldown per IP), protected quota
+ *
+ * Rate limit state is stored in Cloudflare KV (CACHE_KV) when available,
+ * ensuring consistent enforcement across all edge instances.
+ * Falls back to in-memory store for local development.
  */
 
 import type { Context, Next } from "hono";
@@ -17,11 +21,56 @@ export interface RateLimitState {
   dayString: string;
 }
 
-// In-memory rate limit store for edge worker instances
-const rateLimitStore = new Map<string, RateLimitState>();
+// In-memory fallback for local dev (not shared across instances)
+const memRateLimitStore = new Map<string, RateLimitState>();
 
 function getTodayString(): string {
   return new Date().toISOString().split("T")[0];
+}
+
+async function getRateLimitState(
+  kv: KVNamespace | undefined,
+  key: string,
+  today: string
+): Promise<RateLimitState> {
+  if (kv) {
+    try {
+      const raw = await kv.get(`rl:${key}`);
+      if (raw) {
+        const state: RateLimitState = JSON.parse(raw);
+        if (state.dayString !== today) {
+          return { lastRequestTime: 0, requestCountToday: 0, dayString: today };
+        }
+        return state;
+      }
+    } catch {
+      // fall through to memory
+    }
+  }
+  const state = memRateLimitStore.get(key);
+  if (!state) return { lastRequestTime: 0, requestCountToday: 0, dayString: today };
+  if (state.dayString !== today) return { lastRequestTime: 0, requestCountToday: 0, dayString: today };
+  return state;
+}
+
+async function setRateLimitState(
+  kv: KVNamespace | undefined,
+  key: string,
+  state: RateLimitState
+): Promise<void> {
+  if (kv) {
+    try {
+      // TTL: expire KV entry at end of day + 1 hour buffer
+      const midnightTtl = 86400 - (Date.now() % 86400000) / 1000 + 3600;
+      await kv.put(`rl:${key}`, JSON.stringify(state), {
+        expirationTtl: Math.ceil(midnightTtl),
+      });
+      return;
+    } catch {
+      // fall through to memory
+    }
+  }
+  memRateLimitStore.set(key, state);
 }
 
 export function createAuthMiddleware() {
@@ -46,17 +95,30 @@ export function createAuthMiddleware() {
 
     token = token?.trim();
 
-    // Determine User Role
+    // Determine User Role — strict exact-match only (no prefix shortcuts in production)
     let role: UserRole = "guest";
     if (token) {
-      if (token === devKey || token.startsWith("dev_")) {
+      if (token === devKey) {
         role = "dev";
-      } else if (vipKeysList.includes(token) || token.startsWith("vip_")) {
+      } else if (vipKeysList.includes(token)) {
         role = "vip";
       }
+      // NOTE: prefix-based auto-upgrade (e.g. token.startsWith("dev_")) has been
+      // intentionally removed to prevent unauthorized privilege escalation.
     }
 
-    // Rate Limiting Check
+    // Dev bypasses rate limiting entirely
+    if (role === "dev") {
+      c.set("userRole", role);
+      if (token) c.set("token", token);
+      c.header("X-User-Role", role);
+      c.header("X-RateLimit-Cooldown", "0s");
+      c.header("X-RateLimit-Remaining-Today", "unlimited");
+      await next();
+      return;
+    }
+
+    // Rate Limiting Check (KV-backed for cross-instance consistency)
     const now = Date.now();
     const today = getTodayString();
     const clientIP =
@@ -65,32 +127,21 @@ export function createAuthMiddleware() {
       "anonymous_client";
 
     const rateLimitKey = role === "guest" ? `guest:${clientIP}` : `${role}:${token}`;
-    const state = rateLimitStore.get(rateLimitKey) || {
-      lastRequestTime: 0,
-      requestCountToday: 0,
-      dayString: today,
-    };
-
-    if (state.dayString !== today) {
-      state.requestCountToday = 0;
-      state.dayString = today;
-    }
+    const kv = c.env?.CACHE_KV as KVNamespace | undefined;
+    const state = await getRateLimitState(kv, rateLimitKey, today);
 
     // Define cooldown and daily quota per role
     let cooldownMs = 60_000; // Guest: 60s
     let dailyQuota = 60;
 
-    if (role === "dev") {
-      cooldownMs = 0; // Dev: 0s (Unlimited)
-      dailyQuota = 999_999;
-    } else if (role === "vip") {
+    if (role === "vip") {
       cooldownMs = 15_000; // VIP: 15s
       dailyQuota = 1_000;
     }
 
     const elapsedMs = now - state.lastRequestTime;
 
-    // Bypass cooldown for initial preflight or health checks
+    // Enforce cooldown
     if (cooldownMs > 0 && elapsedMs < cooldownMs) {
       const waitSeconds = Math.ceil((cooldownMs - elapsedMs) / 1000);
       return c.json(
@@ -111,7 +162,7 @@ export function createAuthMiddleware() {
     // Update state
     state.lastRequestTime = now;
     state.requestCountToday += 1;
-    rateLimitStore.set(rateLimitKey, state);
+    await setRateLimitState(kv, rateLimitKey, state);
 
     // Set Context variables for handlers
     c.set("userRole", role);
