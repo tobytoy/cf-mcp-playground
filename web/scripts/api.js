@@ -24,7 +24,7 @@ export function getApiBaseUrl() {
   if (customEndpoint) return customEndpoint.replace(/\/$/, "");
   
   if (window.location.hostname.includes("github.io")) {
-    return "https://cf-mcp-playground.workers.dev"; // Fallback Cloudflare Worker URL
+    return "https://cf-mcp-playground.tobywang2021.workers.dev"; // Live Cloudflare Worker URL
   }
   return window.location.origin;
 }

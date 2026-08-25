@@ -236,6 +236,8 @@ dist/
 .dev.vars
 .dev.vars.*
 !.dev.vars.example
+TMP/sec.md
+*.secret
 
 # OS metadata
 .DS_Store

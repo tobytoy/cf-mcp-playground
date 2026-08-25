@@ -2,6 +2,9 @@
 
 Cloudflare Worker 與 Docker 雙運行環境的 **Model Context Protocol (MCP)** 服務，內建 **MCP Skills 知識庫** 與 **Redis 提問快取加速** 機制。
 
+## Live Demo
+[Demo Link](https://tobytoy.github.io/cf-mcp-playground/?token=toby)
+
 ---
 
 ## 🌟 核心特色
