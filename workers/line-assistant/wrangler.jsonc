@@ -1,0 +1,25 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "line-assistant-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-05-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1.0
+  },
+  "vars": {
+    "ENVIRONMENT": "production",
+    "NEEDLE_API_URL": "http://127.0.0.1:8000/route",
+    "GOOGLE_SHEET_APP_URL": "https://script.google.com/macros/s/AKfycbxQlUBJwYbZDLFH0CVGWZM5g_SkEISAOxOATfnUX7CVbNOfXCWfX-8BmNeMgiYnbChy1Q/exec"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "ASSISTANT_KV",
+      "id": "0b10c6bad629469fbab1307f98ad0349",
+      "preview_id": "b9eed95d82e743e8a1a7fe3a8e1875b3"
+    }
+  ]
+}

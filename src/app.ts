@@ -105,8 +105,8 @@ export function createApp(envBindings?: AppEnv): McpApp {
 
   // ── Auth Status Endpoint ──────────────────────────────────────────────────
   app.get("/api/auth/status", async (c) => {
-    const devKey = c.env?.DEV_SECRET_KEY || "dev_local_secret";
-    const vipKeysList = (c.env?.VIP_SECRET_KEYS || "vip_default,vip_friends")
+    const devKey = c.env?.DEV_SECRET_KEY || envBindings?.DEV_SECRET_KEY || "dev_local_secret";
+    const vipKeysList = (c.env?.VIP_SECRET_KEYS || envBindings?.VIP_SECRET_KEYS || "vip_default,vip_friends")
       .split(",")
       .map((k) => k.trim())
       .filter(Boolean);
@@ -120,9 +120,9 @@ export function createApp(envBindings?: AppEnv): McpApp {
 
     let role: UserRole = "guest";
     if (token) {
-      if (token === devKey || token.startsWith("dev_")) {
+      if (token === devKey) {
         role = "dev";
-      } else if (vipKeysList.includes(token) || token.startsWith("vip_")) {
+      } else if (vipKeysList.includes(token)) {
         role = "vip";
       }
     }
@@ -143,7 +143,7 @@ export function createApp(envBindings?: AppEnv): McpApp {
   });
 
   // ── Apply Auth & Rate Limit to Protected Endpoints ────────────────────────
-  const authMiddleware = createAuthMiddleware();
+  const authMiddleware = createAuthMiddleware(envBindings);
 
   app.use("/api/transport/*", authMiddleware);
   app.use("/mcp", authMiddleware);
@@ -257,7 +257,11 @@ export function createApp(envBindings?: AppEnv): McpApp {
 
   app.get("/api/cache/stats", async (c) => c.json(await cache.getStats()));
 
-  app.post("/api/cache/clear", async (c) => {
+  app.post("/api/cache/clear", authMiddleware, async (c) => {
+    const role = c.get("userRole");
+    if (role !== "dev") {
+      return c.json({ error: "Unauthorized: only dev role can clear cache" }, 403);
+    }
     await cache.clear();
     return c.json({ success: true, message: "Cache successfully cleared." });
   });

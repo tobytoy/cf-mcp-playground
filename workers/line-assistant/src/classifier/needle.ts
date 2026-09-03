@@ -1,0 +1,255 @@
+import type { Env, RoutingResult, GeminiModel } from "../types/env";
+import { ASSISTANT_TOOLS } from "./tools";
+
+export class NeedleClassifier {
+  private apiUrl?: string;
+  private apiKey?: string;
+
+  constructor(env: Env) {
+    this.apiUrl = env.NEEDLE_API_URL;
+    this.apiKey = env.NEEDLE_API_KEY;
+  }
+
+  /**
+   * Route user intent using Needle 2 SAN model / Edge heuristics / Gemini fallback.
+   */
+  async classify(userPrompt: string, geminiFallbackFn?: (prompt: string) => Promise<RoutingResult>): Promise<RoutingResult> {
+    const trimmed = userPrompt.trim();
+
+    // 1. Fast Edge Heuristic Classifier (0ms, 100% precision on explicit patterns)
+    const fastMatch = this.tryFastPatternMatch(trimmed);
+    if (fastMatch) {
+      return fastMatch;
+    }
+
+    // 2. Call Needle Service (if URL configured)
+    if (this.apiUrl) {
+      try {
+        const needleResult = await this.callNeedleApi(trimmed);
+        if (needleResult && needleResult.confidence >= 0.7) {
+          return needleResult;
+        }
+      } catch (error) {
+        console.warn("[NeedleClassifier] Needle API call failed or unavailable, falling back:", error);
+      }
+    }
+
+    // 3. Fallback to Gemini AI Router (if fallback function provided)
+    if (geminiFallbackFn) {
+      try {
+        return await geminiFallbackFn(trimmed);
+      } catch (error) {
+        console.error("[NeedleClassifier] Gemini fallback router error:", error);
+      }
+    }
+
+    // Default safe fallback: Ask Gemini 3.5 Flash Lite
+    return {
+      tool: "ask_llm",
+      arguments: {
+        prompt: trimmed,
+        target_model: "gemini-3.5-flash-lite"
+      },
+      confidence: 0.5,
+      reasoning: "Default fallback to lightweight Gemini model"
+    };
+  }
+
+  /**
+   * Fast regex / keyword heuristic match for sub-millisecond dispatch.
+   */
+  private tryFastPatternMatch(prompt: string): RoutingResult | null {
+    // 1. URL Pattern Match -> read_url
+    const urlMatch = prompt.match(/https?:\/\/[^\s]+/i);
+    if (urlMatch) {
+      return {
+        tool: "read_url",
+        arguments: {
+          url: urlMatch[0],
+          user_prompt: prompt
+        },
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected target HTTP/HTTPS URL"
+      };
+    }
+
+    // 2. Explicit Calculation Pattern Match -> calculator
+    if (
+      /^(計算|算一下|幫我算|math|calc|eval)[:：\s]/i.test(prompt) ||
+      /^[\d\s+\-*/^().,%sqrt|sin|cos|tan|log|pi|e]+$/i.test(prompt) && /[+\-*/^]/.test(prompt)
+    ) {
+      const cleanExpr = prompt.replace(/^(計算|算一下|幫我算|math|calc|eval)[:：\s]*/i, "").trim();
+      return {
+        tool: "calculator",
+        arguments: {
+          expression: cleanExpr || prompt,
+          explanation_needed: true
+        },
+        confidence: 0.98,
+        reasoning: "Heuristic: Detected explicit calculation request"
+      };
+    }
+
+    // 3. Todo Management Pattern Match -> manage_todo
+    if (/^(待辦|代辦|todo)[:：\s]/i.test(prompt)) {
+      const itemText = prompt.replace(/^(待辦|代辦|todo)[:：\s]*/i, "").trim();
+      return {
+        tool: "manage_todo",
+        arguments: {
+          action: itemText.includes("列出") || itemText.includes("查看") || !itemText ? "list" : "add",
+          item: itemText
+        },
+        confidence: 0.95,
+        reasoning: "Heuristic: Detected todo command"
+      };
+    }
+
+    if (/^(查看待辦|列出待辦|待辦清單|待辦事項)/i.test(prompt)) {
+      return {
+        tool: "manage_todo",
+        arguments: { action: "list" },
+        confidence: 0.98,
+        reasoning: "Heuristic: Detected todo list request"
+      };
+    }
+
+    // 4. Memo Recording Pattern Match -> save_memo
+    if (/^(記一下|備忘|筆記|memo|note)[:：\s]/i.test(prompt)) {
+      const memoText = prompt.replace(/^(記一下|備忘|筆記|memo|note)[:：\s]*/i, "").trim();
+      return {
+        tool: "save_memo",
+        arguments: {
+          content: memoText
+        },
+        confidence: 0.95,
+        reasoning: "Heuristic: Detected memo recording command"
+      };
+    }
+
+    // 5. File Transmission Pattern Match -> send_file
+    if (/(傳送檔案|傳檔案|下載|給我.*(pdf|文件|報表|圖片))/i.test(prompt)) {
+      return {
+        tool: "send_file",
+        arguments: {
+          file_id: prompt
+        },
+        confidence: 0.90,
+        reasoning: "Heuristic: Detected file transfer request"
+      };
+    }
+
+    // 6. Weather Forecast Pattern Match -> weather_forecast
+    if (/(天氣|氣象|降雨|氣溫|溫度|會下雨嗎|下雨|帶傘|雷達回波|寒流|熱不熱|天母天氣|台北天氣)/i.test(prompt)) {
+      return {
+        tool: "weather_forecast",
+        arguments: {
+          location: prompt
+        },
+        confidence: 0.98,
+        reasoning: "Heuristic: Detected weather forecast request"
+      };
+    }
+
+    // 7. Real-time Search Pattern Match -> search_web
+    if (/^(搜尋|查一下|查詢|即時|最新|search)/i.test(prompt) || /(即時新聞|股價|今日行情|重大新聞)/i.test(prompt)) {
+      const query = prompt.replace(/^(搜尋|查一下|查詢|即時|最新|search)[:：\s]*/i, "").trim();
+      return {
+        tool: "search_web",
+        arguments: {
+          query: query || prompt,
+          freshness: "day"
+        },
+        confidence: 0.92,
+        reasoning: "Heuristic: Detected real-time search query"
+      };
+    }
+
+    // 8. System Diagnostics & Error Logs Pattern Match -> view_debug
+    if (/(系統日誌|查看日誌|排查|查錯誤|debug|系統診斷|看log|error log|logs)/i.test(prompt)) {
+      return {
+        tool: "view_debug",
+        arguments: {
+          type: prompt.includes("錯") || prompt.includes("error") ? "errors" : "recent"
+        },
+        confidence: 0.98,
+        reasoning: "Heuristic: Detected diagnostic / debug logs request"
+      };
+    }
+    // 7. Usage Statistics & History Pattern Match -> view_stats
+    if (/(使用統計|使用紀錄|歷史紀錄|歷史對話|統計資訊|我用了幾次|使用次數|查詢紀錄|呼叫次數|歷史用量|用量|stats|history|usage)/i.test(prompt)) {
+      return {
+        tool: "view_stats",
+        arguments: {
+          action: prompt.includes("歷史") || prompt.includes("history") ? "history" : "summary"
+        },
+        confidence: 0.98,
+        reasoning: "Heuristic: Detected usage statistics or history request"
+      };
+    }
+
+    // 8. Transport & Nearby Context Pattern Match -> nearby_transport
+    if (/(附近.*(youbike|ubike|單車|停車場|公車|捷運|交通|車站|車位)|(youbike|ubike|找停車|停車位|公車到站|查公車|查捷運|周邊交通))/i.test(prompt)) {
+      return {
+        tool: "nearby_transport",
+        arguments: {
+          location: prompt
+        },
+        confidence: 0.95,
+        reasoning: "Heuristic: Detected transport and surroundings query"
+      };
+    }
+
+    // 9. Exam Quiz & Practice Pattern Match -> exam_quiz
+    if (/(考一題|測驗|出題|考古題|做題目|練習題|刷題|國考題|考我|模擬考|下一題|quiz|exam)/i.test(prompt)) {
+      return {
+        tool: "exam_quiz",
+        arguments: {
+          subject: prompt
+        },
+        confidence: 0.98,
+        reasoning: "Heuristic: Detected exam quiz or practice request"
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Call Cactus Compute Needle REST API endpoint.
+   */
+  private async callNeedleApi(prompt: string): Promise<RoutingResult | null> {
+    if (!this.apiUrl) return null;
+
+    const response = await fetch(this.apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {})
+      },
+      body: JSON.stringify({
+        prompt,
+        tools: ASSISTANT_TOOLS
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Needle API responded with status ${response.status}`);
+    }
+
+    const data = (await response.json()) as {
+      tool?: string;
+      name?: string;
+      arguments?: Record<string, unknown>;
+      parameters?: Record<string, unknown>;
+      confidence?: number;
+      target_model?: GeminiModel;
+    };
+
+    return {
+      tool: data.tool || data.name || "ask_llm",
+      arguments: data.arguments || data.parameters || { prompt },
+      confidence: data.confidence ?? 0.85,
+      target_model: data.target_model
+    };
+  }
+}

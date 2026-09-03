@@ -73,17 +73,16 @@ async function setRateLimitState(
   memRateLimitStore.set(key, state);
 }
 
-export function createAuthMiddleware() {
+export function createAuthMiddleware(fallbackEnv?: AppEnv) {
   return async function authAndRateLimitMiddleware(
     c: Context<{ Bindings: AppEnv; Variables: { userRole: UserRole; token?: string } }>,
     next: Next
   ) {
-    const devKey = c.env?.DEV_SECRET_KEY || "dev_local_secret";
-    const vipKeysList = (c.env?.VIP_SECRET_KEYS || "vip_default,vip_friends")
+    const devKey = c.env?.DEV_SECRET_KEY || fallbackEnv?.DEV_SECRET_KEY || "dev_local_secret";
+    const vipKeysList = (c.env?.VIP_SECRET_KEYS || fallbackEnv?.VIP_SECRET_KEYS || "vip_default,vip_friends")
       .split(",")
       .map((k) => k.trim())
       .filter(Boolean);
-
     // Extract token from:
     // 1. Authorization: Bearer <token>
     // 2. X-API-Key: <token>
@@ -140,6 +139,19 @@ export function createAuthMiddleware() {
     }
 
     const elapsedMs = now - state.lastRequestTime;
+
+    // Enforce daily quota
+    if (state.requestCountToday >= dailyQuota) {
+      return c.json(
+        {
+          error: `已達今日請求上限 (${dailyQuota} 次)。請明日再試或升級身分。`,
+          role,
+          dailyQuota,
+          requestCountToday: state.requestCountToday,
+        },
+        429
+      );
+    }
 
     // Enforce cooldown
     if (cooldownMs > 0 && elapsedMs < cooldownMs) {

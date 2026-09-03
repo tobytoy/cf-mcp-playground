@@ -14,7 +14,10 @@
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "test": "tsx tests/test-mcp.ts"
+    "test": "tsx tests/test-mcp.ts",
+    "dev:line-bot": "wrangler dev --config workers/line-assistant/wrangler.jsonc",
+    "deploy:line-bot": "wrangler deploy --config workers/line-assistant/wrangler.jsonc",
+    "test:line-bot": "tsx workers/line-assistant/tests/run-all-tests.ts"
   },
   "keywords": [
     "mcp",

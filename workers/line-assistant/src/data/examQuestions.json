@@ -1,0 +1,632 @@
+[
+  {
+    "id": "q_db_114_01",
+    "subject": "高等資料庫設計",
+    "year": 114,
+    "question": "在關聯式資料庫正規化理論中，若一關聯綱要已符合 3NF，但仍存在「主鍵的部分屬性功能相依於非主鍵屬性（即非超鍵決定了主鍵屬性）」之異常，應進一步提升至何種正規化？",
+    "options": [
+      "A. 第一正規化 (1NF)",
+      "B. 第二正規化 (2NF)",
+      "C. 鮑斯-科得正規化 (BCNF)",
+      "D. 第四正規化 (4NF)"
+    ],
+    "answer": "C",
+    "explanation": "【114年 高等資料庫設計考點】\n• 3NF 允許『決定者為超鍵 (Superkey)』或『被決定屬性為主鍵之主屬性 (Prime Attribute)』。\n• 當非超鍵決定了主屬性時，會產生更新/刪除異常，此時必須消除所有非超鍵決定因子，提升至 BCNF (Boyce-Codd Normal Form)。"
+  },
+  {
+    "id": "q_db_113_01",
+    "subject": "高等資料庫設計",
+    "year": 113,
+    "question": "資料庫交易 (Transaction) 的 ACID 特性中，若要防止『髒讀 (Dirty Read)』現象，交易隔離等級 (Isolation Level) 最低必須設定為下列何者？",
+    "options": [
+      "A. Read Uncommitted",
+      "B. Read Committed",
+      "C. Repeatable Read",
+      "D. Serializable"
+    ],
+    "answer": "B",
+    "explanation": "【113年 高等資料庫設計考點】\n• Read Uncommitted 會發生髒讀 (Dirty Read)。\n• Read Committed 保證只能讀取已提交的交易資料，可完全防止髒讀。\n• Repeatable Read 可進一步防止不可重複讀 (Non-repeatable Read)。\n• Serializable 為最高等級，可防止幻讀 (Phantom Read)。"
+  },
+  {
+    "id": "q_db_112_01",
+    "subject": "高等資料庫設計",
+    "year": 112,
+    "question": "在分散式資料庫系統與 CAP 定理 (Brewer's CAP Theorem) 中，當網路發生分割 (Partition Tolerance, P) 時，系統若選擇保證高可用性 (Availability, A)，必須犧牲下列何種特性？",
+    "options": [
+      "A. 一致性 (Consistency)",
+      "B. 耐久性 (Durability)",
+      "C. 原子性 (Atomicity)",
+      "D. 隔離性 (Isolation)"
+    ],
+    "answer": "A",
+    "explanation": "【112年 高等資料庫設計考點】\n• 根據 CAP 定理，在分散式系統中，網路分割容錯 (P) 是無法避免的。\n• 當網路斷線或延遲時，若選擇可用性 (A，節點仍能回應讀寫)，則不同節點間的資料無法即時同步，必須犧牲強一致性 (C)，轉為最終一致性 (Eventual Consistency)。"
+  },
+  {
+    "id": "q_db_111_01",
+    "subject": "高等資料庫設計",
+    "year": 111,
+    "question": "在多版本並行控制 (MVCC, Multi-Version Concurrency Control) 架構中，資料庫系統通常如何實現『讀取操作不會阻塞寫入操作，寫入操作亦不會阻塞讀取操作』？",
+    "options": [
+      "A. 強制將所有讀取鎖定為排他鎖 (Exclusive Lock)",
+      "B. 透過 Undo Log / 回滾段維護資料的歷史快照版本",
+      "C. 關閉所有交易的 WAL (Write-Ahead Logging)",
+      "D. 限制整個資料庫同一時間只能執行一個交易"
+    ],
+    "answer": "B",
+    "explanation": "【111年 高等資料庫設計考點】\n• MVCC 透過為每筆資料保留版本鏈 (如 PostgreSQL 的 xmin/xmax 或 MySQL InnoDB 的 Undo Log + Read View)，讓讀取交易查看符合其時間戳記的快照版本，因此讀寫互不阻塞，大幅提升高並發效能。"
+  },
+  {
+    "id": "q_db_108_01",
+    "subject": "高等資料庫設計",
+    "year": 108,
+    "question": "在關聯式資料庫索引結構中，B+ Tree 相較於標準 B Tree，更適合用於範圍查詢 (Range Query) 的主要原因為何？",
+    "options": [
+      "A. B+ Tree 所有資料皆存放在內部節點",
+      "B. B+ Tree 所有葉節點包含全部鍵值且以鏈結串列 (Linked List) 相連",
+      "C. B+ Tree 樹的高度通常比 B Tree 高出許多",
+      "D. B+ Tree 不需要進行節點分裂 (Node Splitting)"
+    ],
+    "answer": "B",
+    "explanation": "【108年 高等資料庫設計考點】\n• B+ Tree 的非葉節點僅存放索引鍵 (Routing)，所有實際資料指標均存放在葉節點 (Leaf Nodes)。\n• 葉節點之間以雙向鏈結串列相連，當執行 BETWEEN a AND b 範圍掃描時，只要找到起點即可沿著鏈結線性遍歷，無需在樹中上下回溯。"
+  },
+  {
+    "id": "q_db_104_01",
+    "subject": "高等資料庫設計",
+    "year": 104,
+    "question": "在關聯資料庫正規化中，若關聯 R(A, B, C, D) 具有函數相依：A -> B, B -> C, A -> D，則屬性 C 對候選鍵 A 存在何種相依關係？",
+    "options": [
+      "A. 部分相依 (Partial Dependency)",
+      "B. 遞移相依 (Transitive Dependency)",
+      "C. 多值相依 (Multivalued Dependency)",
+      "D. 結合相依 (Join Dependency)"
+    ],
+    "answer": "B",
+    "explanation": "【104年 高等資料庫設計考點】\n• 因為 A -> B 且 B -> C (其中 B 不是超鍵，C 不是主屬性)，導致 A 間接決定了 C，這稱為『遞移相依 (Transitive Dependency)』。\n• 消除遞移相依可使關聯從 2NF 提升至 3NF。"
+  },
+  {
+    "id": "q_db_101_01",
+    "subject": "高等資料庫設計",
+    "year": 101,
+    "question": "在二階段鎖定協定 (2PL, Two-Phase Locking) 中，若要保證交易排程達到『可序列化 (Serializability)』且能防止『串聯回滾 (Cascading Abort)』，應採用何種協定？",
+    "options": [
+      "A. 基礎 2PL (Basic 2PL)",
+      "B. 嚴格 2PL (Strict 2PL)",
+      "C. 樂觀並行控制 (OCC)",
+      "D. 時間戳記排序法 (Timestamp Ordering)"
+    ],
+    "answer": "B",
+    "explanation": "【101年 高等資料庫設計考點】\n• Strict 2PL 要求交易持有的所有排他鎖 (Exclusive Lock, X-lock) 必須一直維持到交易提交 (Commit) 或中止 (Abort) 後才能釋放。\n• 這保證了未提交交易寫入的資料不會被其他交易讀取，徹底杜絕串聯回滾。"
+  },
+  {
+    "id": "q_sec_114_01",
+    "subject": "資訊管理與資通安全",
+    "year": 114,
+    "question": "行政院推動之『零信任網路架構 (Zero Trust Architecture, ZTA)』中，三大核心技術控制架構包含：身分鑑別、設備鑑別，以及下列何者？",
+    "options": [
+      "A. 信任推導 (Trust Inference)",
+      "B. 邊界防火牆隔離 (Perimeter Firewall)",
+      "C. 網路安全防護（網段隔離與微切分）",
+      "D. 實體門禁控制 (Physical Access Control)"
+    ],
+    "answer": "A",
+    "explanation": "【114年 資管與資安考點】\n• 台灣國家零信任網路架構 (ZTA) 三大核心階段：\n  1. 身分鑑別 (Identity) — 導入 FIDO2/無密碼多因子驗證\n  2. 設備鑑別 (Device) — 確認設備健康與安全性合規\n  3. 信任推導 (Trust Inference) — 動態綜合情資評估風險並授權。"
+  },
+  {
+    "id": "q_sec_113_01",
+    "subject": "資訊管理與資通安全",
+    "year": 113,
+    "question": "依據 ISO/IEC 27001:2022 最新版資訊安全管理系統標準，下列何者屬於新增的核心安全控制措施 (Control)？",
+    "options": [
+      "A. 威脅情資 (Threat Intelligence)",
+      "B. 密碼長度至少 8 碼",
+      "C. 禁用 USB 隨身碟",
+      "D. 每日全備份原則"
+    ],
+    "answer": "A",
+    "explanation": "【113年 資管與資安考點】\n• ISO 27001:2022 Annex A 新增了 11 項關鍵控制措施，包括：\n  • 威脅情資 (Threat Intelligence, A.5.7)\n  • 雲端服務安全 (Information security for cloud services, A.5.23)\n  • 資料隱碼/資料遮蔽 (Data masking, A.8.11)\n  • 安全編碼 (Secure coding, A.8.28)\n  • 實體監控 (Physical monitoring, A.7.4) 等。"
+  },
+  {
+    "id": "q_sec_112_01",
+    "subject": "資訊管理與資通安全",
+    "year": 112,
+    "question": "在現代身分鑑別機制中，FIDO2 協定之所以能有效防禦釣魚網站 (Phishing Attack) 與中間人攻擊 (MitM)，關鍵技術機制為何？",
+    "options": [
+      "A. 使用了長達 32 碼的複雜隨機密碼",
+      "B. 簽章訊息中強制綁定當前瀏覽器的來源網域 (Origin / RP ID) 與公私鑰非對稱驗證",
+      "C. 將使用者的私鑰同步備份至雲端伺服器",
+      "D. 每次登入強制發送 SMS 簡訊驗證碼"
+    ],
+    "answer": "B",
+    "explanation": "【112年 資管與資安考點】\n• FIDO2 (WebAuthn + CTAP) 採用非對稱加密。\n• 認證時瀏覽器會將當前存取的網域名稱 (Relying Party ID) 作為簽章挑戰的一部分。\n• 釣魚網站即使仿冒介面，其網域與合法網站不同，安全金鑰簽署的憑證在後端會直接驗證失敗，達成免疫釣魚。"
+  },
+  {
+    "id": "q_sec_111_01",
+    "subject": "資訊管理與資通安全",
+    "year": 111,
+    "question": "在企業資通安全事件應變程序中，NIST SP 800-61 定義的安全事件處理生命週期四大階段順序為何？",
+    "options": [
+      "A. 偵測與分析 -> 準備 -> 遏制根除 -> 事後復原",
+      "B. 準備 (Preparation) -> 偵測與分析 (Detection & Analysis) -> 遏制、根除與復原 (Containment, Eradication & Recovery) -> 事故後活動 (Post-Incident Activity)",
+      "C. 鑑識 -> 報警 -> 格式化 -> 結案",
+      "D. 防火牆阻擋 -> 備份還原 -> 懲處人員 -> 撰寫報告"
+    ],
+    "answer": "B",
+    "explanation": "【111年 資管與資安考點】\n• NIST SP 800-61 Incident Handling Guide 標準四階段：\n  1. 準備 (Preparation)\n  2. 偵測與分析 (Detection & Analysis)\n  3. 遏制、根除與復原 (Containment, Eradication & Recovery)\n  4. 事後檢討與改善 (Post-Incident Activity / Lessons Learned)。"
+  },
+  {
+    "id": "q_sec_109_01",
+    "subject": "資訊管理與資通安全",
+    "year": 109,
+    "question": "在縱深防禦 (Defense in Depth) 與 MITRE ATT&CK 框架中，攻擊者進入內部網路後，為了在目標環境中維持長期控制權並在重新開機後仍能執行，所採取的戰術 (Tactics) 為何？",
+    "options": [
+      "A. 初始存取 (Initial Access)",
+      "B. 持久化 (Persistence)",
+      "C. 權限提升 (Privilege Escalation)",
+      "D. 資料外洩 (Exfiltration)"
+    ],
+    "answer": "B",
+    "explanation": "【109年 資管與資安考點】\n• 持久化 (Persistence) 是指攻擊者透過修改註冊表、排程任務 (Cron/Task Scheduler)、Web Shell 或植入服務等技術，讓惡意程式在系統重啟、中斷連線或憑證重置後依然維持控制權。"
+  },
+  {
+    "id": "q_sec_105_01",
+    "subject": "資訊管理與資通安全",
+    "year": 105,
+    "question": "在非對稱密碼學 (Asymmetric Cryptography) 中，若 Alice 要發送一封機密訊息給 Bob，且 Bob 需要確認該訊息確實是由 Alice 發出且未被篡改，應如何使用金鑰？",
+    "options": [
+      "A. Alice 用自己的公鑰加密，Bob 用自己的私鑰解密",
+      "B. Alice 用自己的私鑰簽章，再用 Bob 的公鑰加密；Bob 用自己的私鑰解密，再用 Alice 的公鑰驗證簽章",
+      "C. Alice 用 Bob 的私鑰加密，Bob 用 Alice 的私鑰解密",
+      "D. Alice 與 Bob 共享同一把對稱金鑰"
+    ],
+    "answer": "B",
+    "explanation": "【105年 資管與資安考點】\n• 機密性 (Confidentiality)：使用【接收者 (Bob) 的公鑰】加密，只有 Bob 的私鑰能解開。\n• 不可否認性與完整性 (Integrity & Non-repudiation)：使用【發送者 (Alice) 的私鑰】簽章，所有人可用 Alice 的公鑰驗證來源。"
+  },
+  {
+    "id": "q_sa_114_01",
+    "subject": "系統分析與設計",
+    "year": 114,
+    "question": "在領域驅動設計 (Domain-Driven Design, DDD) 與微服務架構中，用於明確劃定特定業務概念、術語與領域模型邊界，避免不同模組間概念混淆的核心模式為何？",
+    "options": [
+      "A. 界定上下文 (Bounded Context)",
+      "B. 資料傳輸物件 (DTO)",
+      "C. 單例模式 (Singleton Pattern)",
+      "D. 物件關聯映射 (ORM)"
+    ],
+    "answer": "A",
+    "explanation": "【114年 系統分析與設計考點】\n• 界定上下文 (Bounded Context) 是 DDD 的核心戰略模式。\n• 它定義了通用語言 (Ubiquitous Language) 與領域模型的適用範圍。例如『帳戶 (Account)』在電商交易上下文與在銀行清算上下文有截然不同的屬性與職責，透過 Bounded Context 隔離能確保微服務設計的高內聚低耦合。"
+  },
+  {
+    "id": "q_sa_113_01",
+    "subject": "系統分析與設計",
+    "year": 113,
+    "question": "在 UML 2.0 類別圖 (Class Diagram) 中，『聚合 (Aggregation)』與『組成 (Composition)』的最核心差異為何？",
+    "options": [
+      "A. 聚合代表強整體與部分關係，整體銷毀時部分一併銷毀",
+      "B. 組成代表強整體與部分關係（實心菱形），部分的生命週期與整體綁定，不可單獨存在",
+      "C. 聚合以實線空心箭頭表示，組成以虛線表示",
+      "D. 兩者完全相同，僅符號顏色不同"
+    ],
+    "answer": "B",
+    "explanation": "【113年 系統分析與設計考點】\n• 聚合 (Aggregation, 空心菱形)：代表『弱擁有』關係。例如『部門』與『員工』，部門解散時員工依然存在。\n• 組成 (Composition, 實心菱形)：代表『強擁有』關係。例如『訂單』與『訂單明細項』，訂單被刪除時其明細項亦隨之消滅。"
+  },
+  {
+    "id": "q_sa_111_01",
+    "subject": "系統分析與設計",
+    "year": 111,
+    "question": "在物件導向設計原則 SOLID 中，『開閉原則 (Open-Closed Principle, OCP)』的確切意涵為何？",
+    "options": [
+      "A. 軟體實體應對擴展開放 (Open for Extension)，對修改封閉 (Closed for Modification)",
+      "B. 子類別必須能完全替換其父類別而不影響程式正確性",
+      "C. 應將大介面拆分為多個小而專一的介面",
+      "D. 高階模組不應依賴低階模組，兩者都應依賴抽象"
+    ],
+    "answer": "A",
+    "explanation": "【111年 系統分析與設計考點】\n• 開閉原則 (OCP)：當有新需求或業務變更時，應透過新增類別/多型/介面實作來擴充功能，而非修改既有已測試穩定的程式碼。\n• B 為里氏替換 (LSP)，C 為介面隔離 (ISP)，D 為依賴反轉 (DIP)。"
+  },
+  {
+    "id": "q_sa_109_01",
+    "subject": "系統分析與設計",
+    "year": 109,
+    "question": "在 GoF 23 種設計模式中，若需要讓多個觀察者物件同時監聽某一個主體物件的狀態改變，並在主體狀態改變時自動收到通知更新，應採用下列何種模式？",
+    "options": [
+      "A. 策略模式 (Strategy Pattern)",
+      "B. 觀察者模式 (Observer Pattern)",
+      "C. 工廠模式 (Factory Pattern)",
+      "D. 轉接器模式 (Adapter Pattern)"
+    ],
+    "answer": "B",
+    "explanation": "【109年 系統分析與設計考點】\n• 觀察者模式 (Observer / Publish-Subscribe)：定義物件間一對多的相依關係，當 Subject 發布狀態更新時，所有已註冊的 Observers 都會被自動調用 notify()。"
+  },
+  {
+    "id": "q_sa_104_01",
+    "subject": "系統分析與設計",
+    "year": 104,
+    "question": "在微服務架構中，當某個下游服務發生故障或回應延遲過長時，為了防止連鎖反應導致整個分散式系統雪崩崩潰，通常採用何種設計模式？",
+    "options": [
+      "A. 斷路器模式 (Circuit Breaker Pattern)",
+      "B. 單例模式 (Singleton Pattern)",
+      "C. 裝飾者模式 (Decorator Pattern)",
+      "D. 代理模式 (Proxy Pattern)"
+    ],
+    "answer": "A",
+    "explanation": "【104年 系統分析與設計考點】\n• 斷路器模式 (Circuit Breaker)：當失敗次數達到閾值時跳脫 (Open State)，立即返回降級錯誤或預設快取，阻止向故障服務發送請求，並在冷卻後進入 Half-Open 狀態探測復原。"
+  },
+  {
+    "id": "q_pm_114_01",
+    "subject": "軟體專案管理",
+    "year": 114,
+    "question": "在軟體專案管理中，未經正式變更控制流程 (Change Control Process)，導致專案範圍與功能不受控地持續膨脹擴張，最終引發時程延宕與預算超支的現象稱為？",
+    "options": [
+      "A. 範疇蔓延 (Scope Creep)",
+      "B. 鍍金效應 (Gold Plating)",
+      "C. 霍桑效應 (Hawthorne Effect)",
+      "D. 帕金森定律 (Parkinson's Law)"
+    ],
+    "answer": "A",
+    "explanation": "【114年 軟體專案管理考點】\n• 範疇蔓延 (Scope Creep)：專案範圍未受控增加。\n• 鍍金 (Gold Plating)：開發團隊未經客戶要求私自增加額外無用功能。\n• 帕金森定律：工作會自動膨脹直到佔滿所有可用時間。"
+  },
+  {
+    "id": "q_pm_113_01",
+    "subject": "軟體專案管理",
+    "year": 113,
+    "question": "在專案排程與要徑法 (CPM, Critical Path Method) 分析中，『要徑 (Critical Path)』的最關鍵特性為何？",
+    "options": [
+      "A. 是專案網路圖中總耗時最短的路徑",
+      "B. 決定了專案的最早完工時間，且路徑上所有活動的總浮時 (Total Float) 為 0",
+      "C. 該路徑上的任何活動都可以任意延遲",
+      "D. 專案中只會存在唯一一條要徑"
+    ],
+    "answer": "B",
+    "explanation": "【113年 軟體專案管理考點】\n• 要徑 (Critical Path) 是網狀圖中耗時最長的一條路徑。\n• 它的總時間即為專案的最短工期。\n• 要徑上的活動總浮時為 0 (Total Float = 0)，其上任何作業延遲都會直接導致整個專案完工日期延後。"
+  },
+  {
+    "id": "q_pm_112_01",
+    "subject": "軟體專案管理",
+    "year": 112,
+    "question": "在敏捷開發 Scrum 框架中，下列何者『不屬於』Scrum 定義的三大角色 (Scrum Roles) 之一？",
+    "options": [
+      "A. 產品負責人 (Product Owner)",
+      "B. 專案經理 (Project Manager)",
+      "C. 敏捷教練/Scrum 專家 (Scrum Master)",
+      "D. 開發團隊 (Developers / Development Team)"
+    ],
+    "answer": "B",
+    "explanation": "【112年 軟體專案管理考點】\n• Scrum 官方指南三大核心角色：Product Owner (負責願景與 Product Backlog 優先級)、Scrum Master (負責流程引導與排除障礙)、Developers (負責交付增量)。\n• 傳統『專案經理 (Project Manager)』在標準 Scrum 中被去中心化分擔至上述角色。"
+  },
+  {
+    "id": "q_pm_110_01",
+    "subject": "軟體專案管理",
+    "year": 110,
+    "question": "在資訊科技接受模型 (Technology Acceptance Model, TAM) 中，決定使用者對新資訊系統『使用意圖 (Behavioral Intention)』與『實際使用 (Actual Use)』的兩大核心認知信念為何？",
+    "options": [
+      "A. 感知有用性 (Perceived Usefulness) 與 感知易用性 (Perceived Ease of Use)",
+      "B. 系統價格 (Price) 與 開發時程 (Schedule)",
+      "C. 程式碼行數 (LOC) 與 測試覆蓋率 (Coverage)",
+      "D. 伺服器規格 (Specs) 與 頻寬大小 (Bandwidth)"
+    ],
+    "answer": "A",
+    "explanation": "【110年 軟體專案管理考點】\n• Davis (1989) 提出的 TAM 模型指出：\n  1. 感知有用性 (PU)：使用者相信使用該系統能提升其工作績效的程度。\n  2. 感知易用性 (PEOU)：使用者認為操作該系統的容易程度（不費吹灰之力）。"
+  },
+  {
+    "id": "q_pm_106_01",
+    "subject": "軟體專案管理",
+    "year": 106,
+    "question": "在軟體專案實獲值管理 (EVM, Earned Value Management) 中，若專案的時程績效指標 SPI = 0.8，成本績效指標 CPI = 1.2，代表專案目前處於何種狀態？",
+    "options": [
+      "A. 進度超前、成本超支",
+      "B. 進度落後、成本節省 (低於預算)",
+      "C. 進度落後、成本超支",
+      "D. 進度超前、成本節省"
+    ],
+    "answer": "B",
+    "explanation": "【106年 軟體專案管理考點】\n• SPI (Schedule Performance Index) = EV / PV。SPI = 0.8 < 1 代表進度落後 (Behind Schedule)。\n• CPI (Cost Performance Index) = EV / AC。CPI = 1.2 > 1 代表成本節省/未超支 (Under Budget)。"
+  },
+  {
+    "id": "q_const_114_01",
+    "subject": "憲法與英文",
+    "year": 114,
+    "question": "依據中華民國憲法增修條文規定，立法院對行政院院長提出不信任案（倒閣案），如經全體立法委員二分之一以上贊成通過，行政院院長應於十日內提出辭職，並得同時呈請總統採取何種作為？",
+    "options": [
+      "A. 解散立法院",
+      "B. 宣佈戒嚴",
+      "C. 發布緊急命令",
+      "D. 解散監察院"
+    ],
+    "answer": "A",
+    "explanation": "【114年 憲法考點】\n• 憲法增修條文第 3 條第 2 項第 3 款規定：立法院得經全體立法委員三分之一以上連署，對行政院院長提出不信任案。\n• 不信任案通過後，行政院院長應於十日內提出辭職，並得同時呈請總統解散立法院。"
+  },
+  {
+    "id": "q_const_113_01",
+    "subject": "憲法與英文",
+    "year": 113,
+    "question": "依據憲法訴訟法與司法院大法官釋憲實務，行政機關對人民基本權利之限制，必須符合『目的正當性、手段適當性、侵害最小之必要性、以及權衡妥當之狹義比例性』，此憲法原則稱為？",
+    "options": [
+      "A. 法律保留原則 (Principle of Statutory Reservation)",
+      "B. 比例原則 (Principle of Proportionality)",
+      "C. 平等原則 (Principle of Equality)",
+      "D. 信賴保護原則 (Principle of Protection of Legitimate Expectations)"
+    ],
+    "answer": "B",
+    "explanation": "【113年 憲法考點】\n• 憲法第 23 條所揭櫫之比例原則，包含三大子原則：\n  1. 適當性原則（手段能達成目的）\n  2. 必要性原則（在所有能達成目的之手段中選擇侵害最小者）\n  3. 狹義比例原則/衡量性（手段造成的損害與追求的公益不可顯失均衡）。"
+  },
+  {
+    "id": "q_const_111_01",
+    "subject": "憲法與英文",
+    "year": 111,
+    "question": "依據司法院釋字第 585 號及第 325 號解釋，立法院行使調查權與調閱權之範圍與界限，下列敘述何者『錯誤』？",
+    "options": [
+      "A. 立法院調查權屬於立法院行使職權之輔助性權力",
+      "B. 調查對象得包含人民或政府官員",
+      "C. 立法院得直接調閱偵查中且尚未起訴之檢察官偵查卷證核心細節",
+      "D. 司法機關審判中之案件，立法院不得行使調查權予以干預"
+    ],
+    "answer": "C",
+    "explanation": "【111年 憲法考點】\n• 司法院釋字第 325 號及第 585 號解釋明確指出：基於權力分立與司法獨立原則，偵查中之案件為確保偵查程序順利進行及不公開原則，立法院不得向檢察機關調閱偵查中之相關卷證。"
+  },
+  {
+    "id": "q_const_108_01",
+    "subject": "憲法與英文",
+    "year": 108,
+    "question": "In cloud computing and cybersecurity, what does the term \"Zero-Day Vulnerability\" refer to?",
+    "options": [
+      "A. A software flaw that has been disclosed for zero days and has no available vendor patch",
+      "B. A backup system that takes zero days to recover data",
+      "C. A network connection with zero packet loss latency",
+      "D. An antivirus software that expires within zero days"
+    ],
+    "answer": "A",
+    "explanation": "【108年 英文/資安考點】\n• Zero-Day Vulnerability (零日漏洞)：指該漏洞剛被發現或已被攻擊者利用，而軟體開發原廠尚未發布任何修補程式 (Patch)，開發者防禦應變時間為『零天』。"
+  },
+  {
+    "id": "q_const_102_01",
+    "subject": "憲法與英文",
+    "year": 102,
+    "question": "依據憲法增修條文規定，司法院大法官之人數、任期與任命程序，下列何者正確？",
+    "options": [
+      "A. 大法官共 15 人，由總統提名，經立法院同意任命之，任期 8 年且不得連任",
+      "B. 大法官共 9 人，任期終身職",
+      "C. 大法官由司法院院長直接聘任",
+      "D. 大法官得連選連任一次"
+    ],
+    "answer": "A",
+    "explanation": "【102年 憲法考點】\n• 憲法增修條文第 5 條：司法院設大法官 15 人，並以其中 1 人為院長、1 人為副院長，由總統提名，經立法院同意任命之。\n• 大法官任期 8 年，不分屆次，個別計算，並不得連任（院長、副院長不受任期保障）。"
+  },
+  {
+    "id": "q_chi_114_01",
+    "subject": "國文",
+    "year": 114,
+    "question": "依據現行公文程式條例與行政院文書處理手冊規定，平行機關之間或無隸屬關係之同級機關相互行文時，應使用何種公文類別？",
+    "options": [
+      "A. 令",
+      "B. 呈",
+      "C. 函",
+      "D. 咨"
+    ],
+    "answer": "C",
+    "explanation": "【114年 國文公文考點】\n• 函：同級機關（平行機關）公文往返、上級對下級指示或下級對上級陳報時最通用之公文程式。\n• 令：公布法律、發布法規命令時使用。\n• 呈：對總統有所陳請或報告時使用。\n• 咨：總統與立法院公文往返時使用。"
+  },
+  {
+    "id": "q_chi_113_01",
+    "subject": "國文",
+    "year": 113,
+    "question": "公文用語中，上級機關對於下級機關公文之期望及目的語，通常使用下列何者？",
+    "options": [
+      "A. 請 查照",
+      "B. 請 照辦 / 希 照辦",
+      "C. 請 鑒核",
+      "D. 祈 請惠示卓見"
+    ],
+    "answer": "B",
+    "explanation": "【113年 國文公文考點】\n• 上級對下級：『請 照辦』、『希 照辦』、『希 查照辦理』。\n• 平行機關：『請 查照』、『請 查照惠復』。\n• 下級對上級：『請 鑒核』、『請 核示』。"
+  },
+  {
+    "id": "q_chi_111_01",
+    "subject": "國文",
+    "year": 111,
+    "question": "下列成語之用字與字義，何者完全正確且無錯別字？",
+    "options": [
+      "A. 趨之若鶩（比喻許多人爭相前往趨附）",
+      "B. 迫不急待",
+      "C. 名列前矛",
+      "D. 默守成規"
+    ],
+    "answer": "A",
+    "explanation": "【111年 國文測驗考點】\n• A. 趨之若鶩：正確（鶩為鴨子，形容眾人爭相追逐）。\n• B. 應為『迫不及待』。\n• C. 應為『名列前茅』。\n• D. 應為『墨守成規』（源自墨子善於守城）。"
+  },
+  {
+    "id": "q_chi_108_01",
+    "subject": "國文",
+    "year": 108,
+    "question": "《論語》云：『君子不以言舉人，不以人廢言。』這句話所表達的核心處事哲學為何？",
+    "options": [
+      "A. 評斷人才與意見應客觀公正，不因其言辭動聽而盲目拔擢，亦不因其身分而否定其正確意見",
+      "B. 君子應保持沉默少說話",
+      "C. 位高權重者講話必定正確",
+      "D. 人才選拔只看其外表談吐"
+    ],
+    "answer": "A",
+    "explanation": "【108年 國文閱讀考點】\n• 『不以言舉人』：不因為一個人話說得漂亮動聽就認定他是有德才的君子。\n• 『不以人廢言』：不因為一個人地位卑微或品行有瑕疵就忽視他所說的有道理之言論。"
+  },
+  {
+    "id": "q_chi_104_01",
+    "subject": "國文",
+    "year": 104,
+    "question": "在題辭用法中，若要祝賀他人『新居落成、喬遷誌慶』，最適當的題辭為下列何者？",
+    "options": [
+      "A. 肯堂肯構 / 美輪美奐",
+      "B. 杏林春暖",
+      "C. 桃李芬芳",
+      "D. 駕鶴西歸"
+    ],
+    "answer": "A",
+    "explanation": "【104年 國文題辭考點】\n• 肯堂肯構、美輪美奐、喬遷之喜、堂構更新：祝賀新居落成。\n• 杏林春暖 / 懸壺濟世：祝賀醫院診所開業。\n• 桃李芬芳 / 誨人不倦：讚揚教育界師長。\n• 駕鶴西歸：哀輓之詞。"
+  },
+  {
+    "id": "q_db_110_01",
+    "subject": "高等資料庫設計",
+    "year": 110,
+    "question": "在關聯式資料庫查詢最佳化 (Query Optimization) 中，關聯代數 (Relational Algebra) 啟發式改寫原則，最優先應執行的規則為何？",
+    "options": [
+      "A. 盡可能及早執行選擇 (Selection, σ) 操作，以大幅減少中繼資料筆數",
+      "B. 盡可能將所有的笛卡兒積 (Cartesian Product) 移至最後執行",
+      "C. 延遲所有投影 (Projection) 操作直到資料寫入磁碟",
+      "D. 先計算全部資料表的外結合 (Outer Join) 再進行過濾"
+    ],
+    "answer": "A",
+    "explanation": "【110年 高等資料庫設計考點】\n• 關聯代數最佳化核心啟發式規則：『及早執行選擇操作 (Push Down Selection)』與『及早執行投影 (Push Down Projection)』，在資料流的最早期過濾掉不符條件的橫列 (Tuples) 與直欄，大幅降低後續 Join 操作的記憶體與 I/O 開銷。"
+  },
+  {
+    "id": "q_db_109_01",
+    "subject": "高等資料庫設計",
+    "year": 109,
+    "question": "在分散式資料庫與 NoSQL 系統中，BASE 模型的四大核心特性包含：基本可用 (Basically Available)、軟狀態 (Soft state)，以及下列何者？",
+    "options": [
+      "A. 最終一致性 (Eventual consistency)",
+      "B. 強一致性 (Strong consistency)",
+      "C. 完全隔離性 (Full isolation)",
+      "D. 即時同步性 (Real-time synchronization)"
+    ],
+    "answer": "A",
+    "explanation": "【109年 高等資料庫設計考點】\n• BASE 模型是對傳統 ACID 模型的放寬，專為大規模分散式系統設計：\n  1. Basically Available (基本可用)\n  2. Soft state (軟狀態/允許中間狀態)\n  3. Eventual consistency (最終一致性，保證系統最終達到一致)。"
+  },
+  {
+    "id": "q_sec_110_01",
+    "subject": "資訊管理與資通安全",
+    "year": 110,
+    "question": "在勒索軟體 (Ransomware) 與資料外洩防護中，為確保關鍵資料在遭受破壞時能完整還原，『3-2-1 備份原則』的具體定義為何？",
+    "options": [
+      "A. 備份 3 份資料、使用 2 種不同儲存媒介、其中 1 份存放在異地 (Off-site / 離線或異地雲端)",
+      "B. 3 天備份一次、保留 2 週、花費 1 小時",
+      "C. 備份 3 台主機、使用 2 組密碼、指派 1 名管理員",
+      "D. 3 個月做一次全備份、2 個月做差異備份、1 週做增量備份"
+    ],
+    "answer": "A",
+    "explanation": "【110年 資管與資安考點】\n• 3-2-1 備份黃金準則：\n  • 3：至少製作 3 份資料複本（1 原本 + 2 備份）\n  • 2：將備份存放於 2 種不同的儲存媒介（例如 NAS + 磁帶/外接硬碟）\n  • 1：至少有 1 份備份存放在異地 (Off-site) 或不可變更/離線 (Air-gapped) 雲端儲存。"
+  },
+  {
+    "id": "q_sec_108_01",
+    "subject": "資訊管理與資通安全",
+    "year": 108,
+    "question": "依據台灣《資通安全管理法》規定，公務機關或特定非公務機關發生重大資通安全事件（第三級或第四級事件）時，應於知悉後多久時間內通報主管機關？",
+    "options": [
+      "A. 1 小時內",
+      "B. 2 小時內",
+      "C. 24 小時內",
+      "D. 3 日內"
+    ],
+    "answer": "A",
+    "explanation": "【108年 資管與資安考點】\n• 依據資通安全事件通報及應變辦法第 4 條：公務機關知悉資通安全事件後，應於 1 小時內進行通報。\n• 第三級及第四級資通安全事件應於知悉後 36 小時內完成損害控制或復原作業。"
+  },
+  {
+    "id": "q_sa_112_01",
+    "subject": "系統分析與設計",
+    "year": 112,
+    "question": "在軟體架構模式中，CQRS (Command Query Responsibility Segregation, 命令查詢職責分離) 的核心架構特點為何？",
+    "options": [
+      "A. 將資料修改操作 (Command) 與資料查詢操作 (Query) 的資料模型與通道分離處理",
+      "B. 要求所有的資料庫存取都必須經過 GraphQL",
+      "C. 禁止系統使用快取機制",
+      "D. 所有的寫入操作都必須立即觸發網頁重新整理"
+    ],
+    "answer": "A",
+    "explanation": "【112年 系統分析與設計考點】\n• CQRS 模式將系統的讀寫操作分離：\n  • Command：專注於業務邏輯驗證、狀態變更與資料一致性。\n  • Query：專注於高效能、扁平化與非正規化的資料讀取（如專用 Read Replica 或 Elasticsearch）。"
+  },
+  {
+    "id": "q_sa_110_01",
+    "subject": "系統分析與設計",
+    "year": 110,
+    "question": "在 UML 循序圖 (Sequence Diagram) 中，用於表示『非同步訊息傳遞 (Asynchronous Message)』且呼叫端無需等待回傳即可繼續執行的箭頭符號為何？",
+    "options": [
+      "A. 實線帶開放式線條箭頭 (Open Arrowhead, ➔)",
+      "B. 實線帶填滿三角箭頭 (Filled Triangle)",
+      "C. 虛線帶開放式箭頭",
+      "D. 雙向空心菱形"
+    ],
+    "answer": "A",
+    "explanation": "【110年 系統分析與設計考點】\n• 同步呼叫 (Synchronous Call)：實線 + 實心填滿三角箭頭。\n• 非同步呼叫 (Asynchronous Call)：實線 + 開放式箭頭 (Open Arrowhead / 魚刺箭頭)。\n• 回傳訊息 (Return Message)：虛線 + 開放式箭頭。"
+  },
+  {
+    "id": "q_pm_111_01",
+    "subject": "軟體專案管理",
+    "year": 111,
+    "question": "在三點估算法 (Three-Point Estimating / PERT) 中，已知某工作項目的最樂觀時間 a = 4 天，最可能時間 m = 7 天，最悲觀時間 b = 16 天，依據 β 分布計算出的預期工期 (Expected Duration, TE) 為幾天？",
+    "options": [
+      "A. 8 天",
+      "B. 7 天",
+      "C. 9 天",
+      "D. 10 天"
+    ],
+    "answer": "A",
+    "explanation": "【111年 軟體專案管理考點】\n• PERT 加權公式：TE = (a + 4m + b) / 6\n• 計算：TE = (4 + 4*7 + 16) / 6 = (4 + 28 + 16) / 6 = 48 / 6 = 8 天。"
+  },
+  {
+    "id": "q_pm_109_01",
+    "subject": "軟體專案管理",
+    "year": 109,
+    "question": "在軟體品質管理中，『技術債 (Technical Debt)』最常見的成因與長期影響為何？",
+    "options": [
+      "A. 為了短期快速交付而採取次佳或便宜行事的設計/程式碼，長期將導致維護成本遽增與開發速度減緩",
+      "B. 專案資金不足而向銀行貸款",
+      "C. 購買過多伺服器硬體設備",
+      "D. 測試工程師人數超過開發工程師"
+    ],
+    "answer": "A",
+    "explanation": "【109年 軟體專案管理考點】\n• 技術債 (Ward Cunningham, 1992)：如同財務借貸，短期走捷徑（如缺乏重構、缺乏單元測試、寫死程式碼）能換得快速上線，但若不及時重構償還『本金』，未來每次新增需求都必須支付高額的『利息』維護成本。"
+  },
+  {
+    "id": "q_const_112_01",
+    "subject": "憲法與英文",
+    "year": 112,
+    "question": "依據司法院憲法法庭判決與釋憲意旨，關於人身自由保障之『法官保留原則』，下列敘述何者正確？",
+    "options": [
+      "A. 逮捕、拘禁人民之合法性審查與是否羈押，必須由獨立公正之法院法官決定，行政機關或警察無權擅自決定羈押",
+      "B. 警察機關可自行決定羈押嫌疑犯 30 天",
+      "C. 檢察官有權直接簽發押票羈押被告",
+      "D. 只有立法委員享有法官保留原則之保障"
+    ],
+    "answer": "A",
+    "explanation": "【112年 憲法考點】\n• 憲法第 8 條揭櫫之人身自由保障（釋字第 392 號、第 708 號解釋）：\n• 限制人身自由最嚴厲之處分（如羈押、收容），其審查與決定權屬於『法官保留』，檢察官或行政機關不得自行決定，必須移送法院由法官開庭審查。"
+  },
+  {
+    "id": "q_const_106_01",
+    "subject": "憲法與英文",
+    "year": 106,
+    "question": "What is the primary function of \"Containerization\" (such as Docker) in modern software engineering?",
+    "options": [
+      "A. Packaging an application and its dependencies together to ensure consistent execution across different environments",
+      "B. Compressing video files to reduce network bandwidth",
+      "C. Encrypting email communication with PGP keys",
+      "D. Generating automated SQL database schema backups"
+    ],
+    "answer": "A",
+    "explanation": "【106年 英文/軟工考點】\n• Containerization (容器化)：將應用程式及其相依環境、函式庫打包於輕量化容器中，解決『在我的電腦上可以跑，在伺服器上卻壞掉』的環境不一致問題。"
+  },
+  {
+    "id": "q_chi_112_01",
+    "subject": "國文",
+    "year": 112,
+    "question": "公文簽辦過程中，承辦人員就公務案件提出初步處理意見，陳送長官核示時所使用之文書稱為？",
+    "options": [
+      "A. 簽",
+      "B. 函",
+      "C. 公告",
+      "D. 箋函"
+    ],
+    "answer": "A",
+    "explanation": "【112年 國文公文考點】\n• 簽：機關內部處理公務，承辦人員對長官有所陳述、請示或提出處理意見時使用。\n• 函：對外機關或民眾行文時使用。"
+  },
+  {
+    "id": "q_chi_109_01",
+    "subject": "國文",
+    "year": 109,
+    "question": "下列書信用語中，用於『對父母尊親』的提稱語，最適當的是何者？",
+    "options": [
+      "A. 膝下 / 父母親大人 膝下",
+      "B. 函丈",
+      "C. 大鑒",
+      "D. 順頌 崇祺"
+    ],
+    "answer": "A",
+    "explanation": "【109年 國文尺牘考點】\n• 膝下 / 膝前：用於祖父母、父母。\n• 函丈 / 壇席：用於師長。\n• 大鑒 / 惠鑒：用於平輩/朋友。\n• 順頌 崇祺：祝賀敬詞。"
+  }
+]
