@@ -1,0 +1,14 @@
+# Wrangler build artifacts
+.wrangler/
+dist/
+
+# Node
+node_modules/
+
+# Secrets — NEVER commit real credentials
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+!.env.example

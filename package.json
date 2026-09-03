@@ -1,45 +1,23 @@
 {
   "name": "cf-mcp-playground",
   "version": "1.0.0",
-  "description": "Cloudflare Worker and Docker MCP Service with Redis Caching and Skill Guides",
-  "main": "dist/index.js",
+  "description": "Cloudflare Workers Monorepo — TDX Transport MCP + LINE Assistant",
+  "private": true,
   "type": "module",
-  "scripts": {
-    "dev:worker": "wrangler dev",
-    "dev:node": "tsx watch src/node-server.ts",
-    "build": "tsc",
-    "build:worker": "wrangler deploy --dry-run --outdir dist/worker",
-    "deploy": "wrangler deploy",
-    "start": "node dist/node-server.js",
-    "docker:up": "docker compose up --build -d",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f",
-    "test": "tsx tests/test-mcp.ts",
-    "dev:line-bot": "wrangler dev --config workers/line-assistant/wrangler.jsonc",
-    "deploy:line-bot": "wrangler deploy --config workers/line-assistant/wrangler.jsonc",
-    "test:line-bot": "tsx workers/line-assistant/tests/run-all-tests.ts"
-  },
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "cloudflare-worker",
-    "docker",
-    "redis"
+  "workspaces": [
+    "workers/*"
   ],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "@hono/node-server": "^1.13.8",
-    "@modelcontextprotocol/sdk": "^1.6.1",
-    "dotenv": "^16.4.7",
-    "hono": "^4.7.2",
-    "ioredis": "^5.6.0"
+  "scripts": {
+    "dev:transport": "npm run dev --workspace=workers/transport-mcp",
+    "dev:line": "npm run dev --workspace=workers/line-assistant",
+    "deploy:transport": "npm run deploy --workspace=workers/transport-mcp",
+    "deploy:line": "npm run deploy --workspace=workers/line-assistant",
+    "deploy:all": "npm run deploy --workspace=workers/transport-mcp && npm run deploy --workspace=workers/line-assistant",
+    "test:transport": "npm test --workspace=workers/transport-mcp",
+    "test:line": "npm run test --workspace=workers/line-assistant",
+    "test:all": "npm run test:transport && npm run test:line"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250224.0",
-    "@types/node": "^22.13.5",
-    "tsx": "^4.19.3",
-    "typescript": "^5.7.3",
-    "wrangler": "^3.111.0"
+    "typescript": "^5.7.3"
   }
 }
