@@ -10,6 +10,7 @@ import { testVoiceTranscription } from "./voice.test";
 import { testLocationManager } from "./location.test";
 import { testLineFormatter } from "./formatter.test";
 import { testCronAndMarketBriefings } from "./cron.test";
+import { testOfficialRailFares } from "./fares.test";
 async function main() {
   console.log("==========================================");
   console.log("🚀 LINE Assistant Worker Test Suite");
@@ -28,6 +29,7 @@ async function main() {
     await testLocationManager();
     testLineFormatter();
     await testCronAndMarketBriefings();
+    testOfficialRailFares();
 
     console.log("==========================================");
     console.log("🎉 ALL TESTS PASSED SUCCESSFULLY!");

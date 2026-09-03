@@ -32,6 +32,7 @@ import { formatForLineMessage } from "../utils/lineFormatter";
 import { executeMorningBriefing } from "../cron/morningBriefing";
 import { executeStockBriefing } from "../cron/stockBriefing";
 import { executeGithubBriefing } from "../cron/githubBriefing";
+import { extractRouteOD, lookupOfficialRailFare, formatOfficialFareContext } from "../tools/railFares";
 
 export async function processLineEvent(event: LineEvent, env: Env): Promise<void> {
   const startTime = Date.now();
@@ -139,6 +140,17 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
       if (locManager.hasRelativeLocationReference(userText)) {
         effectiveText = locManager.enrichPromptWithLocation(userText, userLoc);
         stageLogs.push(`Resolved relative location: [${userLoc.title} - ${userLoc.address}]`);
+      }
+
+      // If user asks about travel/route/fares, inject official MOTC/TDX rail fare table
+      const { origin, destination } = extractRouteOD(userText, userLoc.address || userLoc.title);
+      if (destination) {
+        const fareInfo = lookupOfficialRailFare(origin, destination);
+        if (fareInfo) {
+          const fareContext = formatOfficialFareContext(fareInfo);
+          effectiveText = `${fareContext}\n${effectiveText}`;
+          stageLogs.push(`Injected official rail fare: ${origin} -> ${destination} (TRA 自強號 $${fareInfo.tra?.tZeQiang || "N/A"}, THSR $${fareInfo.thsr?.standard || "N/A"})`);
+        }
       }
       // Classify intent via Needle (with Gemini fallback)
       const routingStart = Date.now();
