@@ -29,7 +29,7 @@ async function main() {
     await testLocationManager();
     testLineFormatter();
     await testCronAndMarketBriefings();
-    testOfficialRailFares();
+    await testOfficialRailFares();
 
     console.log("==========================================");
     console.log("🎉 ALL TESTS PASSED SUCCESSFULLY!");

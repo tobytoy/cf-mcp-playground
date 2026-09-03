@@ -18,6 +18,14 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
     }
   },
   {
+    name: "update_rail_fares",
+    description: "同步並更新交通部 (MOTC / TDX) 最新官方核定鐵路票價資料庫 (包含台鐵各級列車與高鐵全線票價)",
+    parameters: {
+      type: "object",
+      properties: {}
+    }
+  },
+  {
     name: "search_web",
     description: "搜尋網際網路最新即時資訊、新聞、即時天氣、股價、賽事或事實查核",
     parameters: {

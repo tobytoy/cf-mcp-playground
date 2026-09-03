@@ -1490,3 +1490,81 @@ export function createGithubBriefingFlexMessage(info: {
     quickReply: DEFAULT_QUICK_REPLY
   };
 }
+
+export function createFareUpdateFlexMessage(info: {
+  updatedAt: string;
+  source: string;
+  routeCount: number;
+  message: string;
+}): OutgoingLineMessage {
+  return {
+    type: "flex",
+    altText: "🚆 交通部 (TDX) 官方票價資料庫同步完成",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#065F46", // Emerald forest
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "🚆 官方鐵路票價資料庫同步", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: `更新完成：${info.updatedAt}`, color: "#A7F3D0", size: "xs", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "lg",
+        contents: [
+          {
+            type: "text",
+            text: info.message,
+            weight: "bold",
+            size: "sm",
+            color: "#0F172A",
+            wrap: true
+          },
+          { type: "separator", margin: "md" },
+          {
+            type: "box",
+            layout: "horizontal",
+            margin: "md",
+            contents: [
+              { type: "text", text: "權威資料來源", size: "xs", color: "#64748B", flex: 2 },
+              { type: "text", text: info.source, size: "xs", weight: "bold", color: "#065F46", align: "end", flex: 3 }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            margin: "xs",
+            contents: [
+              { type: "text", text: "涵蓋起訖路線", size: "xs", color: "#64748B", flex: 2 },
+              { type: "text", text: `${info.routeCount} 條全台主要鐵路路線`, size: "xs", weight: "bold", color: "#0F172A", align: "end", flex: 3 }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            margin: "xs",
+            contents: [
+              { type: "text", text: "支援車種/車廂", size: "xs", color: "#64748B", flex: 2 },
+              { type: "text", text: "台鐵各級 / 高鐵標準自由商務", size: "xs", color: "#334155", align: "end", flex: 3 }
+            ]
+          },
+          { type: "separator", margin: "md" },
+          {
+            type: "text",
+            text: "💡 提示：現在您可以直接在 LINE 詢問「我現在位置如何去花蓮/新竹/台中」，Bot 會自動以最新官方票價回覆！",
+            size: "xs",
+            color: "#475569",
+            wrap: true,
+            margin: "md"
+          }
+        ]
+      }
+    },
+    quickReply: DEFAULT_QUICK_REPLY
+  };
+}

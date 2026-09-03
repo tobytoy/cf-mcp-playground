@@ -112,6 +112,18 @@ async function runTests() {
   console.log("  Stats:\n" + statsText?.split("\n").map((l) => "    " + l).join("\n"));
   console.log("  ✅ Test 4 Passed!\n");
 
+  // 5. Test get_rail_od_fare Tool
+  console.log("▶ Test 5: Execute get_rail_od_fare (Taipei -> Hualien)");
+  const fareResp = await executeMcpRequest(cache, 7, "tools/call", {
+    name: "get_rail_od_fare",
+    arguments: { origin: "台北", destination: "花蓮" },
+  });
+  const fareText = fareResp?.result?.content?.[0]?.text as string;
+  console.log("  Fare Result Preview:\n" + fareText?.split("\n").slice(0, 8).map((l) => "    " + l).join("\n"));
+  if (!fareText?.includes("440")) {
+    throw new Error("Expected TRA fare to include NT$ 440!");
+  }
+  console.log("  ✅ Test 5 Passed!\n");
   console.log("🎉 ALL TESTS PASSED SUCCESSFULLY!");
 }
 

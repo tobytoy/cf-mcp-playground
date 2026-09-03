@@ -211,6 +211,15 @@ export class NeedleClassifier {
       };
     }
 
+
+    if (/(更新.*票價|同步.*票價|票價.*更新|最新票價)/i.test(prompt)) {
+      return {
+        tool: "update_rail_fares",
+        arguments: {},
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected live rail fare update request"
+      };
+    }
     // 9b. Scheduled Briefings on-demand commands
     if (/(早報|晨報|每日晨報|morning|晨間新聞)/i.test(prompt)) {
       return {

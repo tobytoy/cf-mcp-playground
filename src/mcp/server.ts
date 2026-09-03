@@ -12,6 +12,7 @@ import { CacheService, createCacheService } from "../services/cache.js";
 import { TDXClient } from "../services/tdx/client.js";
 import { evaluateTransportContext } from "../services/context/evaluator.js";
 import { planContextualRoute } from "../services/context/router.js";
+import { lookupOfficialRailFare } from "../services/tdx/fares.js";
 import { buildCacheKey } from "../utils/hash.js";
 import type { AppEnv } from "../types/env.js";
 import type { TransportIdentity, TransportState } from "../types/context.js";
@@ -279,6 +280,26 @@ export function createMCPServer(options?: { cacheService?: CacheService; env?: A
         description: "清空快取記錄。",
         inputSchema: { type: "object", properties: {} },
       },
+      // 🚆 [ATOMIC] 9. Rail OD Fare Lookup (台鐵/高鐵/北捷票價查詢)
+      {
+        name: "get_rail_od_fare",
+        description:
+          "【原子工具】查詢台灣鐵路 (台鐵 TRA 各級自強/新自強3000/太魯閣/普悠瑪/莒光/區間)、台灣高鐵 (THSR 標準/自由/商務) 與捷運官方核定起訖點票價與優惠資訊。",
+        inputSchema: {
+          type: "object",
+          properties: {
+            origin: { type: "string", description: "出發地車站或縣市名稱 (例如 '台北', '板橋', '新竹')" },
+            destination: { type: "string", description: "目的地車站或縣市名稱 (例如 '花蓮', '新竹', '台中', '高雄')" },
+            rail_type: {
+              type: "string",
+              enum: ["all", "tra", "thsr", "metro"],
+              default: "all",
+              description: "查詢車種：全部 (all)、台鐵 (tra)、高鐵 (thsr)、捷運 (metro)"
+            }
+          },
+          required: ["origin", "destination"]
+        }
+      },
     ],
   }));
 
@@ -506,6 +527,52 @@ function toolError(message: string) {
     if (name === "clear_mcp_cache") {
       await cache.clear();
       return { content: [{ type: "text", text: "✅ 已清空快取！" }] };
+    }
+
+    if (name === "get_rail_od_fare") {
+      const origin = requireString(args, "origin", "出發地");
+      const destination = requireString(args, "destination", "目的地");
+      const railType = String(args.rail_type || "all");
+
+      const fareInfo = lookupOfficialRailFare(origin, destination);
+      if (!fareInfo) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `⚠️ 查無「${origin}」至「${destination}」的直達鐵路票價記錄，請確認車站名稱（支援：台北、新竹、台中、台南、左營/高雄、花蓮、宜蘭、台東等主要站點）。`
+            }
+          ]
+        };
+      }
+
+      let markdown = `## 🚆 台灣軌道官方核定票價查詢結果 (MOTC / TDX)\n\n`;
+      markdown += `* **起訖區間**：${fareInfo.origin} ⟷ ${fareInfo.destination}\n\n`;
+
+      if (fareInfo.tra && (railType === "all" || railType === "tra")) {
+        markdown += `### 🚂 台鐵 (TRA) 列車票價\n`;
+        markdown += `* **自強號 / 新自強號(EMU3000) / 普悠瑪 / 太魯閣**：**NT$ ${fareInfo.tra.tZeQiang}** 元\n`;
+        markdown += `* **莒光號**：**NT$ ${fareInfo.tra.chuKuang}** 元\n`;
+        markdown += `* **區間車 / 區間快**：**NT$ ${fareInfo.tra.local}** 元\n\n`;
+      }
+
+      if (fareInfo.thsr && (railType === "all" || railType === "thsr")) {
+        markdown += `### 🚅 台灣高鐵 (THSR) 車廂票價\n`;
+        markdown += `* **標準車廂對號座**：**NT$ ${fareInfo.thsr.standard}** 元\n`;
+        markdown += `* **自由座**：**NT$ ${fareInfo.thsr.nonReserved}** 元\n`;
+        markdown += `* **商務車廂**：**NT$ ${fareInfo.thsr.business}** 元\n\n`;
+      }
+
+      if (fareInfo.metro && (railType === "all" || railType === "metro")) {
+        markdown += `### 🚇 捷運接駁票價\n`;
+        markdown += `* **全票單程**：**NT$ ${fareInfo.metro.adult}** 元\n\n`;
+      }
+
+      markdown += `> 💡 官方備註：以上票價為交通部官方核定全票基準價格，敬老/愛心/孩童票享半價優惠。`;
+
+      return {
+        content: [{ type: "text" as const, text: markdown }]
+      };
     }
 
     return { isError: true, content: [{ type: "text", text: `未知的工具名稱: ${name}` }] };

@@ -11,6 +11,7 @@ import {
   createQuizQuestionFlexMessage,
   createQuizAnswerFlexMessage,
   createWeatherFlexMessage,
+  createFareUpdateFlexMessage,
   DEFAULT_QUICK_REPLY
 } from "../line/templates";
 import { NeedleClassifier } from "../classifier/needle";
@@ -32,7 +33,7 @@ import { formatForLineMessage } from "../utils/lineFormatter";
 import { executeMorningBriefing } from "../cron/morningBriefing";
 import { executeStockBriefing } from "../cron/stockBriefing";
 import { executeGithubBriefing } from "../cron/githubBriefing";
-import { extractRouteOD, lookupOfficialRailFare, formatOfficialFareContext } from "../tools/railFares";
+import { extractRouteOD, lookupOfficialRailFare, formatOfficialFareContext, updateOfficialRailFares } from "../tools/railFares";
 
 export async function processLineEvent(event: LineEvent, env: Env): Promise<void> {
   const startTime = Date.now();
@@ -268,6 +269,13 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
           stageLogs.push(`Querying CWA weather for ${locQuery}`);
           const weather = await getTaiwanWeatherForecast(locQuery, env.CWA_API_KEY);
           await lineClient.replyOrPush(replyToken, userId, createWeatherFlexMessage(weather));
+          break;
+        }
+
+        case "update_rail_fares": {
+          stageLogs.push("Triggering live rail fare sync");
+          const updateResult = await updateOfficialRailFares(env.ASSISTANT_KV);
+          await lineClient.replyOrPush(replyToken, userId, createFareUpdateFlexMessage(updateResult));
           break;
         }
 

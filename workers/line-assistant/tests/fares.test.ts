@@ -1,10 +1,13 @@
 import {
   lookupOfficialRailFare,
   extractRouteOD,
-  formatOfficialFareContext
+  formatOfficialFareContext,
+  updateOfficialRailFares
 } from "../src/tools/railFares";
+import { NeedleClassifier } from "../src/classifier/needle";
+import type { Env } from "../src/types/env";
 
-export function testOfficialRailFares(): void {
+export async function testOfficialRailFares(): Promise<void> {
   console.log("▶ Testing Official MOTC / TDX Rail Fares Lookup Engine...");
 
   // 1. Test Taipei -> Hualien Official Fares
@@ -52,6 +55,26 @@ export function testOfficialRailFares(): void {
     throw new Error(`Formatted context missing expected content: ${context}`);
   }
   console.log(`  ✔ Context formatted:\n${context.split('\n').map(l => '     ' + l).join('\n')}`);
+
+  // 5. Test Live Fare Update Engine
+  const updateRes = await updateOfficialRailFares();
+  if (!updateRes.success || updateRes.routeCount < 5) {
+    throw new Error(`Fare update failed: ${JSON.stringify(updateRes)}`);
+  }
+  console.log(`  ✔ Live Fare Update: ${updateRes.message} (${updateRes.source})`);
+
+  // 6. Test Needle Routing for '更新票價'
+  const mockEnv: Env = {
+    LINE_CHANNEL_SECRET: "s",
+    LINE_CHANNEL_ACCESS_TOKEN: "t",
+    GEMINI_API_KEY: "k"
+  };
+  const classifier = new NeedleClassifier(mockEnv);
+  const route = await classifier.classify("幫我更新台鐵高鐵票價");
+  if (route.tool !== "update_rail_fares") {
+    throw new Error(`Expected update_rail_fares, got ${route.tool}`);
+  }
+  console.log(`  ✔ '幫我更新台鐵高鐵票價' -> ${route.tool}`);
 
   console.log("✅ Official Rail Fares tests passed!\n");
 }
