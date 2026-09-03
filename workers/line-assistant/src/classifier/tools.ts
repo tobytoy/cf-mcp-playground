@@ -150,6 +150,22 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
     }
   },
   {
+    name: "view_mistakes",
+    description: "查看個人國考錯題本紀錄、待複習題目數量與各科分佈",
+    parameters: {
+      type: "object",
+      properties: {}
+    }
+  },
+  {
+    name: "review_mistakes",
+    description: "從個人錯題本中抽取曾答錯的題目進行專項重新測驗與攻克複習",
+    parameters: {
+      type: "object",
+      properties: {}
+    }
+  },
+  {
     name: "ask_llm",
     description: "一般知識問答、邏輯推理、程式設計、語言翻譯、創意寫作或聊天",
     parameters: {

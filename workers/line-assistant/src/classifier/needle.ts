@@ -199,6 +199,25 @@ export class NeedleClassifier {
       };
     }
 
+    // 9a. Mistake Notebook Pattern Match -> view_mistakes / review_mistakes
+    if (/(錯題本|看錯題|我的錯題|錯題紀錄|錯題統計|錯題清單|檢視錯題)/i.test(prompt)) {
+      return {
+        tool: "view_mistakes",
+        arguments: {},
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected mistake notebook view request"
+      };
+    }
+
+    if (/(複習錯題|錯題複習|重測錯題|做錯題|錯題重測|練錯題|錯題練習)/i.test(prompt)) {
+      return {
+        tool: "review_mistakes",
+        arguments: {},
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected mistake notebook review request"
+      };
+    }
+
     // 9. Exam Quiz & Practice Pattern Match -> exam_quiz
     if (/(考一題|測驗|出題|考古題|做題目|練習題|刷題|國考題|考我|模擬考|下一題|quiz|exam)/i.test(prompt)) {
       return {

@@ -12,6 +12,7 @@ import {
   createQuizAnswerFlexMessage,
   createWeatherFlexMessage,
   createFareUpdateFlexMessage,
+  createMistakesFlexMessage,
   DEFAULT_QUICK_REPLY
 } from "../line/templates";
 import { NeedleClassifier } from "../classifier/needle";
@@ -52,7 +53,7 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
   try {
     // 1. Handle Postback Actions (e.g. clicking "完成" on Todo or Quiz choice)
     if (event.type === "postback" && event.postback?.data) {
-      await handlePostback(event.postback.data, userId, replyToken, lineClient, todoMemo);
+      await handlePostback(event.postback.data, userId, replyToken, lineClient, todoMemo, env);
       return;
     }
 
@@ -308,6 +309,26 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
           break;
         }
 
+        case "view_mistakes": {
+          const summary = await QuizManager.getMistakeSummary(env.ASSISTANT_KV, userId);
+          stageLogs.push(`Retrieved mistake notebook: ${summary.totalCount} wrong questions`);
+          await lineClient.replyOrPush(replyToken, userId, createMistakesFlexMessage(summary));
+          break;
+        }
+
+        case "review_mistakes": {
+          const mistakeQ = await QuizManager.pickMistakeQuestion(env.ASSISTANT_KV, userId);
+          if (!mistakeQ) {
+            const summary = await QuizManager.getMistakeSummary(env.ASSISTANT_KV, userId);
+            stageLogs.push("No mistakes found in notebook, returning congratulations card");
+            await lineClient.replyOrPush(replyToken, userId, createMistakesFlexMessage(summary));
+          } else {
+            stageLogs.push(`Selected mistake question for review: [${mistakeQ.year} ${mistakeQ.subject}] ${mistakeQ.id}`);
+            await lineClient.replyOrPush(replyToken, userId, createQuizQuestionFlexMessage(mistakeQ));
+          }
+          break;
+        }
+
         case "view_stats": {
           const stats = await analytics.getUsageReport(userId);
           stageLogs.push(`Retrieved stats: total ${stats.totalCalls} calls`);
@@ -442,7 +463,8 @@ async function handlePostback(
   userId: string,
   replyToken: string | undefined,
   lineClient: LineClient,
-  todoMemo: TodoMemoManager
+  todoMemo: TodoMemoManager,
+  env: Env
 ): Promise<void> {
   try {
     const data = JSON.parse(postbackData) as { action: string; id?: string; qid?: string; choice?: string };
@@ -464,6 +486,11 @@ async function handlePostback(
     if (data.action === "quiz_answer" && data.qid && data.choice) {
       const checkResult = QuizManager.checkAnswer(data.qid, data.choice);
       if (checkResult) {
+        if (!checkResult.isCorrect) {
+          await QuizManager.recordMistake(env.ASSISTANT_KV, userId, data.qid, data.choice);
+        } else {
+          await QuizManager.removeMistake(env.ASSISTANT_KV, userId, data.qid);
+        }
         await lineClient.replyOrPush(replyToken, userId, createQuizAnswerFlexMessage(checkResult));
       }
       return;
@@ -473,6 +500,18 @@ async function handlePostback(
     if (data.action === "quiz_next") {
       const nextQuestion = QuizManager.pickRandomQuestion();
       await lineClient.replyOrPush(replyToken, userId, createQuizQuestionFlexMessage(nextQuestion));
+      return;
+    }
+
+    // 4. Exam Quiz Review Mistakes
+    if (data.action === "quiz_review_mistakes") {
+      const mistakeQ = await QuizManager.pickMistakeQuestion(env.ASSISTANT_KV, userId);
+      if (!mistakeQ) {
+        const summary = await QuizManager.getMistakeSummary(env.ASSISTANT_KV, userId);
+        await lineClient.replyOrPush(replyToken, userId, createMistakesFlexMessage(summary));
+      } else {
+        await lineClient.replyOrPush(replyToken, userId, createQuizQuestionFlexMessage(mistakeQ));
+      }
       return;
     }
   } catch (e) {

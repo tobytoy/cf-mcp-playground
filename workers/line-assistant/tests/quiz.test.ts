@@ -49,7 +49,38 @@ export async function testQuizAndTaiwanTime(): Promise<void> {
   }
   console.log(`  ✔ Answer check wrong -> ${wrongOption} isCorrect: false`);
 
-  // 6. Needle Intent Routing for Quiz
+  // 6. Test Mistake Notebook (Recording, Summary, Review, Removal)
+  console.log("  ▶ Testing Mistake Notebook (錯題本)...");
+  const testUser = "test_user_mistakes_999";
+  const recorded = await QuizManager.recordMistake(undefined, testUser, sampleQ.id, wrongOption);
+  if (!recorded || recorded.wrongCount !== 1) {
+    throw new Error(`Mistake recording failed: ${JSON.stringify(recorded)}`);
+  }
+  console.log(`    ✔ Mistake recorded: [${recorded.subject}] ${recorded.qid} (wrong: ${recorded.lastWrongChoice}, ans: ${recorded.correctAnswer})`);
+
+  const summary = await QuizManager.getMistakeSummary(undefined, testUser);
+  if (summary.totalCount !== 1 || !summary.bySubject[sampleQ.subject]) {
+    throw new Error(`Mistake summary mismatch: ${JSON.stringify(summary)}`);
+  }
+  console.log(`    ✔ Mistake summary: total ${summary.totalCount} items, bySubject:`, summary.bySubject);
+
+  const reviewQ = await QuizManager.pickMistakeQuestion(undefined, testUser);
+  if (!reviewQ || reviewQ.id !== sampleQ.id) {
+    throw new Error(`Mistake question review pick failed: ${JSON.stringify(reviewQ)}`);
+  }
+  console.log(`    ✔ Picked mistake question for review: ${reviewQ.id}`);
+
+  const removed = await QuizManager.removeMistake(undefined, testUser, sampleQ.id);
+  if (!removed) {
+    throw new Error("Mistake removal failed!");
+  }
+  const postSummary = await QuizManager.getMistakeSummary(undefined, testUser);
+  if (postSummary.totalCount !== 0) {
+    throw new Error(`Expected 0 mistakes after removal, got ${postSummary.totalCount}`);
+  }
+  console.log(`    ✔ Mastered question removed from mistake notebook. Remaining: ${postSummary.totalCount}`);
+
+  // 7. Needle Intent Routing for Quiz & Mistakes
   const mockEnv: Env = {
     LINE_CHANNEL_SECRET: "s",
     LINE_CHANNEL_ACCESS_TOKEN: "t",
@@ -68,6 +99,18 @@ export async function testQuizAndTaiwanTime(): Promise<void> {
     throw new Error(`Expected exam_quiz, got ${route2.tool}`);
   }
   console.log(`  ✔ '做一題國考測驗' -> ${route2.tool}`);
+
+  const routeMistakes1 = await classifier.classify("我想看我的錯題本");
+  if (routeMistakes1.tool !== "view_mistakes") {
+    throw new Error(`Expected view_mistakes, got ${routeMistakes1.tool}`);
+  }
+  console.log(`  ✔ '我想看我的錯題本' -> ${routeMistakes1.tool}`);
+
+  const routeMistakes2 = await classifier.classify("幫我複習錯題");
+  if (routeMistakes2.tool !== "review_mistakes") {
+    throw new Error(`Expected review_mistakes, got ${routeMistakes2.tool}`);
+  }
+  console.log(`  ✔ '幫我複習錯題' -> ${routeMistakes2.tool}`);
 
   console.log("✅ Taiwan Time & Exam Quiz tests passed!\n");
 }

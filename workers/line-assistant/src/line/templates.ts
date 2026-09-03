@@ -1215,6 +1215,17 @@ export function createQuizAnswerFlexMessage(res: {
             size: "xs",
             color: "#1E293B",
             margin: "sm"
+          },
+          { type: "separator", margin: "md" },
+          {
+            type: "text",
+            text: res.isCorrect
+              ? "✨ 答對了！若此題在錯題本中，系統已自動為您標記攻克！"
+              : "📌 此題已為您自動收錄至【錯題本】，隨時可輸入「複習錯題」重測！",
+            size: "xxs",
+            color: res.isCorrect ? "#059669" : "#DC2626",
+            wrap: true,
+            margin: "md"
           }
         ]
       },
@@ -1222,20 +1233,47 @@ export function createQuizAnswerFlexMessage(res: {
         type: "box",
         layout: "vertical",
         paddingAll: "sm",
-        contents: [
-          {
-            type: "button",
-            style: "primary",
-            color: "#4F46E5",
-            height: "sm",
-            action: {
-              type: "postback",
-              label: "👉 再來一題 (下一題)",
-              displayText: "下一題測驗",
-              data: JSON.stringify({ action: "quiz_next" })
-            }
-          }
-        ]
+        spacing: "sm",
+        contents: res.isCorrect
+          ? [
+              {
+                type: "button",
+                style: "primary",
+                color: "#4F46E5",
+                height: "sm",
+                action: {
+                  type: "postback",
+                  label: "👉 再來一題 (下一題)",
+                  displayText: "下一題測驗",
+                  data: JSON.stringify({ action: "quiz_next" })
+                }
+              }
+            ]
+          : [
+              {
+                type: "button",
+                style: "primary",
+                color: "#4F46E5",
+                height: "sm",
+                action: {
+                  type: "postback",
+                  label: "👉 再來一題 (下一題)",
+                  displayText: "下一題測驗",
+                  data: JSON.stringify({ action: "quiz_next" })
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                action: {
+                  type: "postback",
+                  label: "📚 複習錯題本",
+                  displayText: "複習錯題",
+                  data: JSON.stringify({ action: "quiz_review_mistakes" })
+                }
+              }
+            ]
       }
     },
     quickReply: DEFAULT_QUICK_REPLY
@@ -1561,6 +1599,145 @@ export function createFareUpdateFlexMessage(info: {
             color: "#475569",
             wrap: true,
             margin: "md"
+          }
+        ]
+      }
+    },
+    quickReply: DEFAULT_QUICK_REPLY
+  };
+}
+
+export function createMistakesFlexMessage(summary: {
+  totalCount: number;
+  bySubject: Record<string, number>;
+  recentMistakes: Array<{
+    qid: string;
+    subject: string;
+    year: number;
+    wrongCount: number;
+    lastFailedAt: string;
+  }>;
+}): OutgoingLineMessage {
+  if (summary.totalCount === 0) {
+    return {
+      type: "flex",
+      altText: "🎉 恭喜！目前錯題本空空如也，沒有待攻克的錯題！",
+      contents: {
+        type: "bubble",
+        header: {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: "#059669",
+          paddingAll: "lg",
+          contents: [
+            { type: "text", text: "📚 個人國考錯題本", color: "#FFFFFF", weight: "bold", size: "md" },
+            { type: "text", text: "全科目前掌握度：100% 滿分！", color: "#F0FDF4", size: "xs", margin: "xs" }
+          ]
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          paddingAll: "lg",
+          contents: [
+            { type: "text", text: "🎉 太棒了！您目前沒有任何未攻克的錯題。", size: "sm", color: "#1E293B", weight: "bold" },
+            { type: "text", text: "持續保持練習，輸入「考一題」隨機測驗最新 114/113 年高頻考題！", size: "xs", color: "#64748B", wrap: true, margin: "md" }
+          ]
+        },
+        footer: {
+          type: "box",
+          layout: "vertical",
+          paddingAll: "sm",
+          contents: [
+            {
+              type: "button",
+              style: "primary",
+              color: "#059669",
+              height: "sm",
+              action: {
+                type: "postback",
+                label: "🎯 開始隨機測驗",
+                displayText: "考一題",
+                data: JSON.stringify({ action: "quiz_next" })
+              }
+            }
+          ]
+        }
+      },
+      quickReply: DEFAULT_QUICK_REPLY
+    };
+  }
+
+  const subjectRows = Object.entries(summary.bySubject).map(([subj, count]) => ({
+    type: "box",
+    layout: "horizontal",
+    margin: "xs",
+    contents: [
+      { type: "text", text: `• ${subj}`, size: "xs", color: "#475569", flex: 3 },
+      { type: "text", text: `${count} 題`, size: "xs", weight: "bold", color: "#DC2626", align: "end", flex: 1 }
+    ]
+  }));
+
+  return {
+    type: "flex",
+    altText: `📚 【個人國考錯題本】目前累積 ${summary.totalCount} 題待攻克錯題`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#DC2626", // Red for mistake book
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "📚 個人國考錯題本 (待攻克)", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: `累積待突破錯題：共 ${summary.totalCount} 題`, color: "#FEF2F2", size: "xs", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "📊 各考科待複習分佈：", weight: "bold", size: "xs", color: "#64748B" },
+          ...subjectRows,
+          { type: "separator", margin: "md" },
+          {
+            type: "text",
+            text: "💡 專項建議：點擊下方按鈕或輸入「複習錯題」，系統將優先抽取您曾答錯的高頻考點進行重新挑戰！答對自動移出錯題本。",
+            size: "xxs",
+            color: "#64748B",
+            wrap: true,
+            margin: "md"
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "sm",
+        spacing: "sm",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#DC2626",
+            height: "sm",
+            action: {
+              type: "postback",
+              label: "🎯 開始複習錯題 (重測)",
+              displayText: "複習錯題",
+              data: JSON.stringify({ action: "quiz_review_mistakes" })
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            action: {
+              type: "postback",
+              label: "👉 做一般新題 (隨機)",
+              displayText: "考一題",
+              data: JSON.stringify({ action: "quiz_next" })
+            }
           }
         ]
       }
