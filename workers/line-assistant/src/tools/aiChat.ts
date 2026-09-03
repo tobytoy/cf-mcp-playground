@@ -48,12 +48,14 @@ export async function generateAiResponse(
     return { text: "尚未設定 GEMINI_API_KEY，請確認環境變數。", modelUsed: "none" };
   }
 
-  // Determine target tier
+  // Determine target tier (3.5 Flash Lite is categorized as Strong with high quota weight)
   const isStrong =
+    targetModel === "gemini-3.5-flash-lite" ||
     STRONG_MODEL_POOL.includes(targetModel as (typeof STRONG_MODEL_POOL)[number]) ||
     targetModel.includes("3.8") ||
     targetModel.includes("3.7") ||
     targetModel.includes("3.6") ||
+    targetModel.includes("3.5-flash") ||
     targetModel.includes("pro");
   const tier: ModelTier = isStrong ? "strong" : "light";
 

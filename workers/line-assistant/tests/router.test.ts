@@ -52,7 +52,7 @@ export async function testRouter(): Promise<void> {
 
   // 5. Test Model Tiering & Load Balancing
   const modelForComplex = aiRouter.pickTargetModel("請用 TypeScript 寫一個基於 Web Crypto 的 HMAC-SHA256 驗證函數");
-  const strongModels = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash"];
+  const strongModels = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash"];
   if (!strongModels.includes(modelForComplex)) {
     throw new Error(`Model tiering failed for complex code: got ${modelForComplex}`);
   }
