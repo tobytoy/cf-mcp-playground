@@ -210,6 +210,34 @@ export class NeedleClassifier {
         reasoning: "Heuristic: Detected exam quiz or practice request"
       };
     }
+
+    // 9b. Scheduled Briefings on-demand commands
+    if (/(早報|晨報|每日晨報|morning|晨間新聞)/i.test(prompt)) {
+      return {
+        tool: "briefing_morning",
+        arguments: {},
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected on-demand morning briefing request"
+      };
+    }
+
+    if (/(台股|大盤|收盤|股市|股票|三大法人|台股收盤)/i.test(prompt)) {
+      return {
+        tool: "briefing_stock",
+        arguments: {},
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected on-demand Taiwan stock briefing request"
+      };
+    }
+
+    if (/(github\s*(熱點|趨勢|熱門|專案|repo)|開源黑馬|開源專案|熱門repo|trending)/i.test(prompt)) {
+      return {
+        tool: "briefing_github",
+        arguments: {},
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected on-demand GitHub trending briefing request"
+      };
+    }
     // 10. Complex Task Pattern Match -> complex_task (Directly to High-Tier Gemini 3.8/3.7)
     // Matches: coding, system architecture, deep technical analysis, multi-step planning, or complex long questions
     const isCodeOrArchitecture = /(程式碼|寫一個|寫一段|代碼|debug|演算法|實作|寫成|重構|架構|微服務|系統設計|分散式|高並發|資料流|uml|design pattern|tdd|ddd|api設計|code|typescript|python|golang|sql|rust)/i.test(prompt);

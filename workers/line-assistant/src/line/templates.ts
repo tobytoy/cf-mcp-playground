@@ -1241,3 +1241,252 @@ export function createQuizAnswerFlexMessage(res: {
     quickReply: DEFAULT_QUICK_REPLY
   };
 }
+
+export function createMorningBriefingFlexMessage(info: {
+  dateStr: string;
+  timeStr: string;
+  weather: { condition: string; rainProb: string; tempRange: string; comfort: string; advice: string };
+  todoCount: number;
+  finance: {
+    usStocks: Array<{ symbol: string; name: string; price: number; changePercent: number }>;
+    crypto: Array<{ symbol: string; name: string; priceUsd: number; changePercent24h: number }>;
+  };
+  newsSummary: string;
+}): OutgoingLineMessage {
+  const usStockRows = info.finance.usStocks.slice(0, 4).map((s) => ({
+    type: "box",
+    layout: "horizontal",
+    contents: [
+      { type: "text", text: s.name, size: "xs", color: "#334155", flex: 3 },
+      { type: "text", text: `$${s.price}`, size: "xs", color: "#0F172A", align: "end", flex: 2 },
+      {
+        type: "text",
+        text: `${s.changePercent >= 0 ? "+" : ""}${s.changePercent}%`,
+        size: "xs",
+        weight: "bold",
+        color: s.changePercent >= 0 ? "#059669" : "#DC2626",
+        align: "end",
+        flex: 2
+      }
+    ]
+  }));
+
+  const cryptoRows = info.finance.crypto.slice(0, 2).map((c) => ({
+    type: "box",
+    layout: "horizontal",
+    contents: [
+      { type: "text", text: `${c.name} (${c.symbol})`, size: "xs", color: "#334155", flex: 3 },
+      { type: "text", text: `$${c.priceUsd.toLocaleString()}`, size: "xs", color: "#0F172A", align: "end", flex: 2 },
+      {
+        type: "text",
+        text: `${c.changePercent24h >= 0 ? "+" : ""}${c.changePercent24h}%`,
+        size: "xs",
+        weight: "bold",
+        color: c.changePercent24h >= 0 ? "#059669" : "#DC2626",
+        align: "end",
+        flex: 2
+      }
+    ]
+  }));
+
+  return {
+    type: "flex",
+    altText: `🌅 【晨間全能早報】${info.dateStr} 07:00 天母天氣、美股加密與焦點要聞`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#1E3A5F",
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "🌅 晨間全能早報", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: `📅 台灣時間 ${info.dateStr} ${info.timeStr}`, color: "#93C5FD", size: "xs", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "lg",
+        contents: [
+          // Weather & Todo Row
+          {
+            type: "box",
+            layout: "horizontal",
+            backgroundColor: "#F0F9FF",
+            cornerRadius: "md",
+            paddingAll: "md",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                flex: 3,
+                contents: [
+                  { type: "text", text: "⛅ 天母氣象", size: "xs", color: "#0284C7", weight: "bold" },
+                  { type: "text", text: `${info.weather.condition} ｜ ${info.weather.tempRange}`, size: "xs", color: "#0F172A", margin: "xs" },
+                  { type: "text", text: `降雨率 ☔ ${info.weather.rainProb}`, size: "xs", color: parseInt(info.weather.rainProb) >= 30 ? "#DC2626" : "#059669" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                flex: 2,
+                contents: [
+                  { type: "text", text: "📋 待辦事項", size: "xs", color: "#059669", weight: "bold" },
+                  { type: "text", text: `${info.todoCount} 項未完成`, size: "sm", weight: "bold", color: "#10B981", margin: "xs" },
+                  { type: "text", text: "Google Sheet 同步", size: "xxs", color: "#64748B" }
+                ]
+              }
+            ]
+          },
+          { type: "separator", margin: "md" },
+          // US Stocks & Crypto Markets
+          { type: "text", text: "📈 隔夜美股與加密走勢", weight: "bold", size: "xs", color: "#0284C7", margin: "md" },
+          ...usStockRows,
+          ...cryptoRows,
+          { type: "separator", margin: "md" },
+          // News summary
+          { type: "text", text: "📰 今日重點要聞", weight: "bold", size: "xs", color: "#0284C7", margin: "md" },
+          { type: "text", text: info.newsSummary, wrap: true, size: "xs", color: "#334155", margin: "sm" }
+        ]
+      }
+    },
+    quickReply: DEFAULT_QUICK_REPLY
+  };
+}
+
+export function createStockBriefingFlexMessage(info: {
+  dateStr: string;
+  timeStr: string;
+  quotes: Array<{ symbol: string; name: string; price: number; change: number; changePercent: number }>;
+  summary: string;
+}): OutgoingLineMessage {
+  const quoteBoxes = info.quotes.map((q) => {
+    const isUp = q.change >= 0;
+    // Taiwan convention: Red = Up, Green = Down
+    const color = isUp ? "#DC2626" : "#059669";
+    return {
+      type: "box",
+      layout: "horizontal",
+      margin: "sm",
+      contents: [
+        { type: "text", text: `${q.name} (${q.symbol.replace(".TW", "")})`, size: "xs", color: "#1E293B", flex: 3 },
+        { type: "text", text: `${q.price}`, size: "xs", weight: "bold", color: "#0F172A", align: "end", flex: 2 },
+        {
+          type: "text",
+          text: `${isUp ? "▲ +" : "▼ "}${q.changePercent.toFixed(2)}%`,
+          size: "xs",
+          weight: "bold",
+          color,
+          align: "end",
+          flex: 2
+        }
+      ]
+    };
+  });
+
+  return {
+    type: "flex",
+    altText: `📈 【台股收盤總結】${info.dateStr} 15:00 加權指數與三大法人籌碼動向`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#831843", // Financial deep ruby
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "📈 台股收盤與籌碼總結", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: `📅 台灣時間 ${info.dateStr} ${info.timeStr} (15:00 盤後定案)`, color: "#FBCFE8", size: "xs", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "📊 主要指數與權值股表現 (紅漲綠跌)", weight: "bold", size: "xs", color: "#64748B" },
+          ...quoteBoxes,
+          { type: "separator", margin: "md" },
+          { type: "text", text: "🏛️ 三大法人籌碼與盤面解析", weight: "bold", size: "xs", color: "#9D174D", margin: "md" },
+          { type: "text", text: info.summary, wrap: true, size: "xs", color: "#334155", margin: "sm" }
+        ]
+      }
+    },
+    quickReply: DEFAULT_QUICK_REPLY
+  };
+}
+
+export function createGithubBriefingFlexMessage(info: {
+  dateStr: string;
+  timeStr: string;
+  repos: Array<{ name: string; url: string; description: string; language: string; stars: number }>;
+}): OutgoingLineMessage {
+  const repoBoxes = info.repos.map((r, i) => ({
+    type: "box",
+    layout: "vertical",
+    margin: "md",
+    backgroundColor: "#F8FAFC",
+    cornerRadius: "md",
+    paddingAll: "md",
+    action: {
+      type: "uri",
+      label: r.name,
+      uri: r.url
+    },
+    contents: [
+      {
+        type: "box",
+        layout: "horizontal",
+        contents: [
+          { type: "text", text: `${i + 1}. ${r.name}`, weight: "bold", size: "xs", color: "#0969DA", flex: 4, wrap: true },
+          { type: "text", text: `⭐ ${r.stars.toLocaleString()}`, weight: "bold", size: "xs", color: "#F59E0B", align: "end", flex: 2 }
+        ]
+      },
+      {
+        type: "text",
+        text: r.description,
+        size: "xxs",
+        color: "#475569",
+        wrap: true,
+        margin: "xs"
+      },
+      {
+        type: "box",
+        layout: "horizontal",
+        margin: "xs",
+        contents: [
+          { type: "text", text: `語言: ${r.language}`, size: "xxs", color: "#64748B" }
+        ]
+      }
+    ]
+  }));
+
+  return {
+    type: "flex",
+    altText: `🚀 【GitHub 今日熱點黑馬】${info.dateStr} 19:00 增長最快的開源新星`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#1F2937", // GitHub dark
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "🚀 GitHub 今日熱門開源黑馬", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: `📅 台灣時間 ${info.dateStr} ${info.timeStr} (點擊可開啟倉庫)`, color: "#E5E7EB", size: "xs", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "🔥 今日 Star 增長最快的開源新專案：", weight: "bold", size: "xs", color: "#64748B" },
+          ...repoBoxes
+        ]
+      }
+    },
+    quickReply: DEFAULT_QUICK_REPLY
+  };
+}

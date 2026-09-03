@@ -1,4 +1,4 @@
-import app from "../src/index";
+import { app } from "../src/index";
 import { generateLineSignature } from "../src/line/verifier";
 import type { Env } from "../src/types/env";
 

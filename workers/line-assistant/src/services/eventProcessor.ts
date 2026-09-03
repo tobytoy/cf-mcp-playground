@@ -29,6 +29,9 @@ import { DiagnosticLogger } from "../tools/diagnostics";
 import { transcribeLineAudio } from "../tools/voiceTranscribe";
 import { LocationManager } from "../tools/locationManager";
 import { formatForLineMessage } from "../utils/lineFormatter";
+import { executeMorningBriefing } from "../cron/morningBriefing";
+import { executeStockBriefing } from "../cron/stockBriefing";
+import { executeGithubBriefing } from "../cron/githubBriefing";
 
 export async function processLineEvent(event: LineEvent, env: Env): Promise<void> {
   const startTime = Date.now();
@@ -253,6 +256,19 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
           stageLogs.push(`Querying CWA weather for ${locQuery}`);
           const weather = await getTaiwanWeatherForecast(locQuery, env.CWA_API_KEY);
           await lineClient.replyOrPush(replyToken, userId, createWeatherFlexMessage(weather));
+          break;
+        }
+
+        case "briefing_morning": {
+          await executeMorningBriefing(env, userId);
+          break;
+        }
+        case "briefing_stock": {
+          await executeStockBriefing(env, userId);
+          break;
+        }
+        case "briefing_github": {
+          await executeGithubBriefing(env, userId);
           break;
         }
 

@@ -4,6 +4,9 @@ import type { LineWebhookPayload } from "../types/line";
 import { verifyLineSignature } from "../line/verifier";
 import { processLineEvent } from "../services/eventProcessor";
 import { DiagnosticLogger } from "../tools/diagnostics";
+import { executeMorningBriefing } from "../cron/morningBriefing";
+import { executeStockBriefing } from "../cron/stockBriefing";
+import { executeGithubBriefing } from "../cron/githubBriefing";
 
 export const webhookRouter = new Hono<{ Bindings: Env }>();
 
@@ -78,5 +81,24 @@ webhookRouter.get("/debug/errors", async (c) => {
     status: "ok",
     count: errors.length,
     errors
+  });
+});
+
+webhookRouter.get("/cron/trigger", async (c) => {
+  const type = c.req.query("type") || "morning";
+  let success = false;
+
+  if (type === "stock") {
+    success = await executeStockBriefing(c.env);
+  } else if (type === "github") {
+    success = await executeGithubBriefing(c.env);
+  } else {
+    success = await executeMorningBriefing(c.env);
+  }
+
+  return c.json({
+    status: success ? "success" : "failed",
+    type,
+    message: `Triggered ${type} briefing push to LINE.`
   });
 });
