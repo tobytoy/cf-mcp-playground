@@ -210,6 +210,27 @@ export class NeedleClassifier {
         reasoning: "Heuristic: Detected exam quiz or practice request"
       };
     }
+    // 10. Complex Task Pattern Match -> complex_task (Directly to High-Tier Gemini 3.8/3.7)
+    // Matches: coding, system architecture, deep technical analysis, multi-step planning, or complex long questions
+    const isCodeOrArchitecture = /(程式碼|寫一個|寫一段|代碼|debug|演算法|實作|寫成|重構|架構|微服務|系統設計|分散式|高並發|資料流|uml|design pattern|tdd|ddd|api設計|code|typescript|python|golang|sql|rust)/i.test(prompt);
+    const isDeepReasoning = /(深度分析|推導|詳細分析|方案比較|優缺點比較|利弊|策略規劃|技術選型|設計原則|請深入說明|原理是什麼|怎麼實現)/i.test(prompt);
+    const isSubstantialQuestion = prompt.length >= 70;
+
+    if (isCodeOrArchitecture || isDeepReasoning || isSubstantialQuestion) {
+      let domain = "general";
+      if (isCodeOrArchitecture) domain = "coding";
+      else if (isDeepReasoning) domain = "analysis";
+
+      return {
+        tool: "complex_task",
+        arguments: {
+          prompt,
+          domain
+        },
+        confidence: 0.98,
+        reasoning: "Heuristic: Detected non-trivial complex task requiring high-tier Gemini 3.8/3.7 deep thinking"
+      };
+    }
 
     return null;
   }

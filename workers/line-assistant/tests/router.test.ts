@@ -43,6 +43,13 @@ export async function testRouter(): Promise<void> {
   }
   console.log(`  ✔ Search Routing -> ${res4.tool} (query: ${res4.arguments.query})`);
 
+  // 4b. Test Complex Task routing
+  const resComplex = await classifier.classify("請幫我規劃一套高並發微服務系統架構設計，包含 CQRS 與 Event Sourcing 的具體實作與資料庫選型");
+  if (resComplex.tool !== "complex_task") {
+    throw new Error(`Complex task routing failed: ${JSON.stringify(resComplex)}`);
+  }
+  console.log(`  ✔ Complex Task Routing -> ${resComplex.tool} (domain: ${resComplex.arguments.domain})`);
+
   // 5. Test Model Tiering & Load Balancing
   const modelForComplex = aiRouter.pickTargetModel("請用 TypeScript 寫一個基於 Web Crypto 的 HMAC-SHA256 驗證函數");
   const strongModels = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash"];

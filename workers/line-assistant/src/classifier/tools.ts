@@ -2,6 +2,22 @@ import type { ToolDefinition } from "../types/env";
 
 export const ASSISTANT_TOOLS: ToolDefinition[] = [
   {
+    name: "complex_task",
+    description: "處理高難度複雜任務（系統架構設計、程式碼編寫與除錯、多步驟邏輯規劃、專業利弊分析、技術推導等非簡單指令），直接分派給高級 Gemini 3.8/3.7 進行深度思考",
+    parameters: {
+      type: "object",
+      properties: {
+        prompt: { type: "string", description: "使用者之複雜任務完整需求說明" },
+        domain: {
+          type: "string",
+          enum: ["coding", "architecture", "reasoning", "analysis", "planning", "general"],
+          description: "複雜任務領域"
+        }
+      },
+      required: ["prompt"]
+    }
+  },
+  {
     name: "search_web",
     description: "搜尋網際網路最新即時資訊、新聞、即時天氣、股價、賽事或事實查核",
     parameters: {

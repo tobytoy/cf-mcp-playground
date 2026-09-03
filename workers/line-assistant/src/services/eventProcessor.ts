@@ -294,6 +294,36 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
           });
           break;
         }
+        case "complex_task": {
+          const prompt = (routing.arguments.prompt as string) || userText;
+          const targetModel = routing.target_model || aiRouter.pickTargetModel(prompt, "complex_task");
+          stageLogs.push(`Complex Task identified! Invoking Advanced Gemini (${targetModel}) with deep reasoning`);
+
+          const aiStart = Date.now();
+          const isCode = /(程式碼|代碼|debug|演算法|code|function|class|sql|ts|py|重構)/i.test(prompt);
+          const aiReply = await generateAiResponse(
+            prompt,
+            env.GEMINI_API_KEY,
+            targetModel,
+            [],
+            isCode ? "code" : "detailed"
+          );
+          stageLogs.push(`Advanced Gemini responded in ${Date.now() - aiStart}ms using ${aiReply.modelUsed}`);
+
+          if (aiReply.modelUsed && aiReply.modelUsed !== "none") {
+            await analytics.recordUsage(userId, "complex_task", userText, aiReply.modelUsed);
+          }
+
+          const voicePrefix = isVoice ? `🎙️ 【語音辨識】：「${userText}」\n\n` : "";
+          const headerBadge = `🧠 【高級深度思考・${aiReply.modelUsed || targetModel}】\n\n`;
+
+          await lineClient.replyOrPush(replyToken, userId, {
+            type: "text",
+            text: `${voicePrefix}${headerBadge}${aiReply.text}`,
+            quickReply: DEFAULT_QUICK_REPLY
+          });
+          break;
+        }
 
         case "ask_llm":
         default: {

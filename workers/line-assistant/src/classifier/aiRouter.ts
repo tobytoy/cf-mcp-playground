@@ -15,8 +15,8 @@ export class AiRouter {
    * Determine the most suitable Gemini / Gemma model based on query complexity with load balancing.
    */
   pickTargetModel(prompt: string, intentTool: string = "ask_llm"): GeminiModel {
-    // 1. Math calculation or Search synthesis -> High intelligence model pool (Load balanced)
-    if (intentTool === "calculator" || intentTool === "search_web") {
+    // 1. Complex Task, Math calculation or Search synthesis -> High intelligence model pool (Gemini 3.8/3.7/3.6/3.5)
+    if (intentTool === "complex_task" || intentTool === "calculator" || intentTool === "search_web") {
       return ModelLoadBalancer.pickNextModel("strong") as GeminiModel;
     }
 
