@@ -7,6 +7,7 @@ import { testTransportAndLocation } from "./transport.test";
 import { testQuizAndTaiwanTime } from "./quiz.test";
 import { testWeatherFeature } from "./weather.test";
 import { testVoiceTranscription } from "./voice.test";
+import { testLocationManager } from "./location.test";
 async function main() {
   console.log("==========================================");
   console.log("🚀 LINE Assistant Worker Test Suite");
@@ -22,6 +23,7 @@ async function main() {
     await testQuizAndTaiwanTime();
     await testWeatherFeature();
     await testVoiceTranscription();
+    await testLocationManager();
 
     console.log("==========================================");
     console.log("🎉 ALL TESTS PASSED SUCCESSFULLY!");

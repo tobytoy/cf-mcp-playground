@@ -27,6 +27,7 @@ import { QuizManager } from "../tools/quizManager";
 import { getTaiwanWeatherForecast } from "../tools/weather";
 import { DiagnosticLogger } from "../tools/diagnostics";
 import { transcribeLineAudio } from "../tools/voiceTranscribe";
+import { LocationManager } from "../tools/locationManager";
 
 export async function processLineEvent(event: LineEvent, env: Env): Promise<void> {
   const startTime = Date.now();
@@ -35,6 +36,7 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
   const classifier = new NeedleClassifier(env);
   const aiRouter = new AiRouter(env.GEMINI_API_KEY);
   const analytics = new AnalyticsManager(env.ASSISTANT_KV);
+  const locManager = new LocationManager(env.ASSISTANT_KV);
   const diagLogger = new DiagnosticLogger(env.ASSISTANT_KV);
   const userId = event.source.userId || "anonymous";
   const replyToken = event.replyToken;
@@ -56,12 +58,13 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
       const title = locMsg.title || "目前分享位置";
       const address = locMsg.address || "";
 
-      stageLogs.push(`Received location: (${lat}, ${lon}) ${title}`);
-      await analytics.recordUsage(userId, "nearby_transport", `位置分享: ${title}`);
+      // Save / Update user's persistent location state
+      const savedLoc = await locManager.saveLocation(userId, lat, lon, title, address);
+      stageLogs.push(`Updated user location state: ${savedLoc.address} (${savedLoc.latitude}, ${savedLoc.longitude})`);
+      await analytics.recordUsage(userId, "nearby_transport", `位置更新: ${title}`);
 
       const transportContext = await getNearbyTransportContext(lat, lon, title, address, env.CWA_API_KEY);
       stageLogs.push("Retrieved transport & weather context");
-
       await lineClient.replyOrPush(replyToken, userId, createLocationTransportFlexMessage(transportContext));
 
       await diagLogger.log({
@@ -124,6 +127,15 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
         await lineClient.showLoading(event.source.userId, 20);
       }
 
+      // Retrieve user's saved location (defaults to Tianmu if not yet shared)
+      const userLoc = await locManager.getLocation(userId);
+      let effectiveText = userText;
+
+      // If user asks about "我現在位置", "我的位置", "從這裡", etc., enrich with geographic coordinates and address
+      if (locManager.hasRelativeLocationReference(userText)) {
+        effectiveText = locManager.enrichPromptWithLocation(userText, userLoc);
+        stageLogs.push(`Resolved relative location: [${userLoc.title} - ${userLoc.address}]`);
+      }
       // Classify intent via Needle (with Gemini fallback)
       const routingStart = Date.now();
       const routing = await classifier.classify(userText, (p) => aiRouter.routeWithGemini(p));
@@ -222,17 +234,21 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
 
         case "nearby_transport": {
           const locQuery = (routing.arguments.location as string) || userText;
-          const isDefaultTianmu = !locQuery || locQuery.includes("附近") || locQuery.includes("周邊");
-          const title = isDefaultTianmu ? "天母住家周邊" : locQuery;
-          const address = isDefaultTianmu ? "台北市士林區天母忠誠路二段 (大葉高島屋/天母棒球場周邊)" : `台北市 (${locQuery})`;
-          stageLogs.push(`Querying transport context for ${title}`);
-          const transportContext = await getNearbyTransportContext(25.1119, 121.5312, title, address, env.CWA_API_KEY);
+          const isRelative = locManager.hasRelativeLocationReference(locQuery) || !locQuery || locQuery.includes("附近") || locQuery.includes("周邊");
+          const lat = isRelative ? userLoc.latitude : 25.1119;
+          const lon = isRelative ? userLoc.longitude : 121.5312;
+          const title = isRelative ? userLoc.title : locQuery;
+          const address = isRelative ? userLoc.address : `台北市 (${locQuery})`;
+          stageLogs.push(`Querying transport context for ${title} (${lat}, ${lon})`);
+          const transportContext = await getNearbyTransportContext(lat, lon, title, address, env.CWA_API_KEY);
           await lineClient.replyOrPush(replyToken, userId, createLocationTransportFlexMessage(transportContext));
           break;
         }
-
         case "weather_forecast": {
-          const locQuery = (routing.arguments.location as string) || userText;
+          let locQuery = (routing.arguments.location as string) || userText;
+          if (locManager.hasRelativeLocationReference(locQuery) || !locQuery) {
+            locQuery = userLoc.address || userLoc.title;
+          }
           stageLogs.push(`Querying CWA weather for ${locQuery}`);
           const weather = await getTaiwanWeatherForecast(locQuery, env.CWA_API_KEY);
           await lineClient.replyOrPush(replyToken, userId, createWeatherFlexMessage(weather));
@@ -295,7 +311,7 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
           break;
         }
         case "complex_task": {
-          const prompt = (routing.arguments.prompt as string) || userText;
+          const prompt = effectiveText;
           const targetModel = routing.target_model || aiRouter.pickTargetModel(prompt, "complex_task");
           stageLogs.push(`Complex Task identified! Invoking Advanced Gemini (${targetModel}) with deep reasoning`);
 
@@ -306,7 +322,8 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
             env.GEMINI_API_KEY,
             targetModel,
             [],
-            isCode ? "code" : "detailed"
+            isCode ? "code" : "detailed",
+            userLoc
           );
           stageLogs.push(`Advanced Gemini responded in ${Date.now() - aiStart}ms using ${aiReply.modelUsed}`);
 
@@ -327,11 +344,11 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
 
         case "ask_llm":
         default: {
-          const prompt = (routing.arguments.prompt as string) || userText;
+          const prompt = effectiveText;
           const targetModel = routing.target_model || aiRouter.pickTargetModel(prompt);
           stageLogs.push(`Invoking LLM with target model: ${targetModel}`);
           const aiStart = Date.now();
-          const aiReply = await generateAiResponse(prompt, env.GEMINI_API_KEY, targetModel);
+          const aiReply = await generateAiResponse(prompt, env.GEMINI_API_KEY, targetModel, [], "concise", userLoc);
           stageLogs.push(`LLM responded in ${Date.now() - aiStart}ms using ${aiReply.modelUsed}`);
 
           if (aiReply.modelUsed && aiReply.modelUsed !== "none") {
@@ -346,6 +363,7 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
           });
           break;
         }
+
       }
 
       // Record successful diagnostic log

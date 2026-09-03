@@ -1,4 +1,6 @@
 import { getTaiwanTimeString } from "../utils/time";
+import type { UserSavedLocation } from "./locationManager";
+
 
 import type { GeminiModel } from "../types/env";
 import { ModelLoadBalancer, type ModelTier, STRONG_MODEL_POOL } from "./modelPool";
@@ -19,7 +21,8 @@ export async function generateAiResponse(
   apiKey: string,
   targetModel: GeminiModel | string = "gemini-3.5-flash-lite",
   history: ChatMessage[] = [],
-  style: "concise" | "detailed" | "code" | "creative" = "concise"
+  style: "concise" | "detailed" | "code" | "creative" = "concise",
+  userLocation?: UserSavedLocation
 ): Promise<AiResponseResult> {
   if (!apiKey) {
     return { text: "尚未設定 GEMINI_API_KEY，請確認環境變數。", modelUsed: "none" };
@@ -37,10 +40,18 @@ export async function generateAiResponse(
   const modelChain = ModelLoadBalancer.getModelChain(tier, targetModel);
 
   const twTime = getTaiwanTimeString();
+  const currentLocText = userLocation
+    ? `${userLocation.address || userLocation.title} (經度: ${userLocation.longitude}, 緯度: ${userLocation.latitude}，定位更新於: ${userLocation.updatedAt})`
+    : "台北市士林區天母忠誠路二段（天母棒球場/高島屋周邊）";
+
   let systemPrompt = `你是一個貼心、高效、高智慧的個人專屬 LINE 助理。
 【個人化使用者資訊與時區背景】：
 • 目前標準時間：台灣時間 (UTC+8 / Asia/Taipei) — ${twTime}
-• 使用者住家/常駐地點：台灣台北市士林區天母（鄰近天母棒球場、大葉高島屋、捷運芝山站/明德站）。當回答天氣、在地生活、交通或通勤時，請預設以天母為中心考量。
+• 使用者目前即時定位：${currentLocText}
+• 住家/常駐地點：台灣台北市士林區天母。
+
+【位置語意智能解析】：
+當使用者問句中提及「我現在位置」、「我的位置」、「從這裡」、「從這」、「我這裡」、「附近」等相對指涉時，務必自動將上述【目前即時定位】作為起點或基準點！例如問「我現在位置如何去花蓮」，請直接以該定位點規劃全旅程（如：步行/公車至台北車站 ➔ 搭乘台鐵新自強/太魯閣號前往花蓮，提供班次、轉乘建議與預估時間）。
 
 【語言與排版規範】：
 1. 務必一律使用道地的「繁體中文（台灣，zh-TW）」回答，嚴禁使用簡體中文或未翻譯英文。
