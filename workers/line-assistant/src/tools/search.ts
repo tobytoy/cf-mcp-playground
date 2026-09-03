@@ -1,3 +1,5 @@
+import { formatForLineMessage } from "../utils/lineFormatter";
+
 import { getTaiwanTimeString } from "../utils/time";
 
 import { ModelLoadBalancer } from "./modelPool";
@@ -182,7 +184,7 @@ ${finalInputContext}
             candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
           };
           const ans = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-          if (ans) return ans;
+          if (ans) return formatForLineMessage(ans);
         }
       } catch (err) {
         console.warn(`[SearchTool] Synthesis failed on ${modelId}:`, err);

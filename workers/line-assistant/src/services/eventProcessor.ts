@@ -28,6 +28,7 @@ import { getTaiwanWeatherForecast } from "../tools/weather";
 import { DiagnosticLogger } from "../tools/diagnostics";
 import { transcribeLineAudio } from "../tools/voiceTranscribe";
 import { LocationManager } from "../tools/locationManager";
+import { formatForLineMessage } from "../utils/lineFormatter";
 
 export async function processLineEvent(event: LineEvent, env: Env): Promise<void> {
   const startTime = Date.now();
@@ -183,7 +184,7 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
           stageLogs.push(`URL summary completed`);
           await lineClient.replyOrPush(replyToken, userId, {
             type: "text",
-            text: `📰 【網頁摘要整理】\n\n${summaryRes.summary}`,
+            text: `📰 【網頁摘要整理】\n\n${formatForLineMessage(summaryRes.summary)}`,
             quickReply: DEFAULT_QUICK_REPLY
           });
           break;

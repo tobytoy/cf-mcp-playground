@@ -8,6 +8,7 @@ import { testQuizAndTaiwanTime } from "./quiz.test";
 import { testWeatherFeature } from "./weather.test";
 import { testVoiceTranscription } from "./voice.test";
 import { testLocationManager } from "./location.test";
+import { testLineFormatter } from "./formatter.test";
 async function main() {
   console.log("==========================================");
   console.log("🚀 LINE Assistant Worker Test Suite");
@@ -24,6 +25,7 @@ async function main() {
     await testWeatherFeature();
     await testVoiceTranscription();
     await testLocationManager();
+    testLineFormatter();
 
     console.log("==========================================");
     console.log("🎉 ALL TESTS PASSED SUCCESSFULLY!");

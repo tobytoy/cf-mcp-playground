@@ -1,3 +1,5 @@
+import { formatForLineMessage } from "../utils/lineFormatter";
+
 import { getTaiwanTimeString } from "../utils/time";
 import type { UserSavedLocation } from "./locationManager";
 import type { GeminiModel } from "../types/env";
@@ -75,12 +77,12 @@ export async function generateAiResponse(
 【位置語意智能解析】：
 當使用者問句中提及「我現在位置」、「我的位置」、「從這裡」、「從這」、「我這裡」、「附近」等相對指涉時，務必自動將上述【目前即時定位】作為起點或基準點！例如問「我現在位置如何去花蓮」，請直接以該定位點規劃全旅程（如：步行/公車至台北車站 ➔ 搭乘台鐵新自強/太魯閣號前往花蓮，提供班次、轉乘建議與預估時間）。
 
-【語言與排版規範】：
+【LINE 手機排版與語言規範】：
 1. 務必一律使用道地的「繁體中文（台灣，zh-TW）」回答，嚴禁使用簡體中文或未翻譯英文。
-2. 專業名詞與日常用語請採用台灣繁體習慣（例如：程式碼、演算法、專案、伺服器、預設、網路、介面等）。
-3. 盡量以「條列式 (• 點列)」方式清晰組織重點，版面分段清楚，方便使用者在手機上快速瀏覽。
-4. 語氣自然、專業、條理分明。`;
-
+2. LINE 手機端不支援 Markdown 粗體，嚴禁使用 **星號加粗**（在手機上會印出星號影響閱讀）。強調重點或地名請一律使用「」引號（如：「台北車站」、「高鐵新竹站」）。
+3. 大段落與方案標題請直接使用 🔷【大標題】 或 📌【小標題】 標註，不要使用 ###。
+4. 條列項目請多加利用 • 與 ▸ 做層級縮排，分段清楚、留白適度，方便使用者在手機上快速瀏覽。
+5. 語氣自然、專業、條理分明。`;
   if (style === "concise") {
     systemPrompt += "\n5. 請以簡明扼要、重點清晰的方式回覆，避免不必要的冗長客套話。";
   } else if (style === "code") {
@@ -154,7 +156,7 @@ export async function generateAiResponse(
       }
 
       if (rawReply) {
-        const cleanedReply = cleanThinkingLeakage(rawReply);
+        const cleanedReply = formatForLineMessage(cleanThinkingLeakage(rawReply));
         return { text: cleanedReply, modelUsed: modelId };
       }
     } catch (err) {
