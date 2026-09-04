@@ -21,6 +21,7 @@ import { evaluateMathExpression } from "../tools/calculator";
 import { executeTavilySearch } from "../tools/search";
 import { summarizeUrl } from "../tools/reader";
 import { TodoMemoManager } from "../tools/todoMemo";
+import { StudyMouseManager } from "../tools/studyMouseManager";
 import { generateAiResponse } from "../tools/aiChat";
 import { lookupFile } from "../tools/fileSender";
 import { AnalyticsManager } from "../tools/analytics";
@@ -132,6 +133,25 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
       // Start LINE chat loading animation if not already started
       if (event.source.userId && !isVoice) {
         await lineClient.showLoading(event.source.userId, 20);
+      }
+
+      // Direct Study Mouse admin commands
+      if (userText.startsWith("核准") || userText.startsWith("同意") || userText.startsWith("開通")) {
+        const parts = userText.split(/\s+/);
+        if (parts.length >= 2 && (parts[1].startsWith("SM-") || parts[1].startsWith("U"))) {
+          const smManager = new StudyMouseManager(env.ASSISTANT_KV, env.GOOGLE_SHEET_APP_URL, lineClient, env.ALLOWED_USER_ID);
+          const res = await smManager.approveApplication(parts[1]);
+          await lineClient.replyOrPush(replyToken, userId, { type: "text", text: res.message });
+          return;
+        }
+      } else if (userText.startsWith("取消") || userText.startsWith("拒絕") || userText.startsWith("封鎖")) {
+        const parts = userText.split(/\s+/);
+        if (parts.length >= 2 && (parts[1].startsWith("SM-") || parts[1].startsWith("U"))) {
+          const smManager = new StudyMouseManager(env.ASSISTANT_KV, env.GOOGLE_SHEET_APP_URL, lineClient, env.ALLOWED_USER_ID);
+          const res = await smManager.rejectApplication(parts[1]);
+          await lineClient.replyOrPush(replyToken, userId, { type: "text", text: res.message });
+          return;
+        }
       }
 
       // Retrieve user's saved location (defaults to Tianmu if not yet shared)
@@ -512,6 +532,21 @@ async function handlePostback(
       } else {
         await lineClient.replyOrPush(replyToken, userId, createQuizQuestionFlexMessage(mistakeQ));
       }
+      return;
+    }
+    // 5. Study Mouse Member Approval via Button
+    const rawPostback = data as unknown as Record<string, unknown>;
+    if (data.action === "studymouse_approve" && (rawPostback.ticketId || rawPostback.userId)) {
+      const target = String(rawPostback.ticketId || rawPostback.userId);
+      const smManager = new StudyMouseManager(env.ASSISTANT_KV, env.GOOGLE_SHEET_APP_URL, lineClient, env.ALLOWED_USER_ID);
+      const res = await smManager.approveApplication(target);
+      await lineClient.replyOrPush(replyToken, userId, { type: "text", text: res.message });
+      return;
+    } else if (data.action === "studymouse_reject" && (rawPostback.ticketId || rawPostback.userId)) {
+      const target = String(rawPostback.ticketId || rawPostback.userId);
+      const smManager = new StudyMouseManager(env.ASSISTANT_KV, env.GOOGLE_SHEET_APP_URL, lineClient, env.ALLOWED_USER_ID);
+      const res = await smManager.rejectApplication(target);
+      await lineClient.replyOrPush(replyToken, userId, { type: "text", text: res.message });
       return;
     }
   } catch (e) {

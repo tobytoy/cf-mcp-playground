@@ -7,7 +7,8 @@ import { DiagnosticLogger } from "../tools/diagnostics";
 import { executeMorningBriefing } from "../cron/morningBriefing";
 import { executeStockBriefing } from "../cron/stockBriefing";
 import { executeGithubBriefing } from "../cron/githubBriefing";
-
+import { StudyMouseManager, type StudyMouseApplication } from "../tools/studyMouseManager";
+import { LineClient } from "../line/client";
 export const webhookRouter = new Hono<{ Bindings: Env }>();
 
 webhookRouter.post("/webhook", async (c) => {
@@ -100,5 +101,64 @@ webhookRouter.get("/cron/trigger", async (c) => {
     status: success ? "success" : "failed",
     type,
     message: `Triggered ${type} briefing push to LINE.`
+  });
+});
+
+// =========================================================================
+// Study Mouse LINE Mini App Member API (CORS Enabled)
+// =========================================================================
+webhookRouter.options("/api/studymouse/*", (c) => {
+  return c.body(null, 204, {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  });
+});
+
+webhookRouter.post("/api/studymouse/apply", async (c) => {
+  try {
+    const body = await c.req.json() as StudyMouseApplication;
+    if (!body.userId || !body.ticketId) {
+      return c.json({ error: "Missing required fields" }, 400, {
+        "Access-Control-Allow-Origin": "*",
+      });
+    }
+
+    const lineClient = new LineClient(c.env.LINE_CHANNEL_ACCESS_TOKEN);
+    const manager = new StudyMouseManager(
+      c.env.ASSISTANT_KV,
+      c.env.GOOGLE_SHEET_APP_URL,
+      lineClient,
+      c.env.ALLOWED_USER_ID
+    );
+
+    const res = await manager.submitApplication(body);
+    return c.json(res, 200, {
+      "Access-Control-Allow-Origin": "*",
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ error: msg }, 500, {
+      "Access-Control-Allow-Origin": "*",
+    });
+  }
+});
+
+webhookRouter.get("/api/studymouse/status", async (c) => {
+  const userId = c.req.query("userId");
+  if (!userId) {
+    return c.json({ error: "Missing userId query param" }, 400, {
+      "Access-Control-Allow-Origin": "*",
+    });
+  }
+
+  const manager = new StudyMouseManager(
+    c.env.ASSISTANT_KV,
+    c.env.GOOGLE_SHEET_APP_URL
+  );
+
+  const res = await manager.checkStatus(userId);
+  return c.json(res, 200, {
+    "Access-Control-Allow-Origin": "*",
   });
 });
