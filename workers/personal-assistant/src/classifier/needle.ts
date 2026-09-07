@@ -60,16 +60,34 @@ export class NeedleClassifier {
     }
 
     // 4. Todo Management -> manage_todo
-    if (/^(待辦|代辦|todo)[:：\s]/i.test(trimmed) || /^(查看待辦|列出待辦|我的待辦|待辦事項)/i.test(trimmed)) {
-      const itemText = trimmed.replace(/^(待辦|代辦|todo)[:：\s]*/i, "").trim();
+    if (/^(查看待辦|列出待辦|我的待辦|待辦事項|待辦清單|代辦清單|待辦有哪些|有哪些待辦|待辦|代辦|todo)$/i.test(trimmed)) {
+      return {
+        tool: "manage_todo",
+        arguments: { action: "list" },
+        confidence: 0.98,
+        reasoning: "Heuristic: Detected todo list request"
+      };
+    }
+
+    const todoAddMatch = trimmed.match(/^(?:(?:幫我|請幫我)?(?:新增|記一下|記|記錄)?(?:待辦|代辦|todo)|(?:幫我|請幫我)?提醒我)[:：\s]*(.+)$/i);
+    if (todoAddMatch) {
+      const itemText = todoAddMatch[1].trim();
+      if (["清單", "事項", "有哪些", "列表", "查看", "列出"].includes(itemText)) {
+        return {
+          tool: "manage_todo",
+          arguments: { action: "list" },
+          confidence: 0.98,
+          reasoning: "Heuristic: Detected todo list request"
+        };
+      }
       return {
         tool: "manage_todo",
         arguments: {
-          action: itemText.includes("查看") || itemText.includes("列出") || !itemText ? "list" : "add",
+          action: "add",
           item: itemText
         },
-        confidence: 0.95,
-        reasoning: "Heuristic: Detected todo command"
+        confidence: 0.98,
+        reasoning: "Heuristic: Detected natural language todo add request"
       };
     }
 

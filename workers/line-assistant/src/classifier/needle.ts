@@ -91,25 +91,38 @@ export class NeedleClassifier {
     }
 
     // 3. Todo Management Pattern Match -> manage_todo
-    if (/^(待辦|代辦|todo)[:：\s]/i.test(prompt)) {
-      const itemText = prompt.replace(/^(待辦|代辦|todo)[:：\s]*/i, "").trim();
-      return {
-        tool: "manage_todo",
-        arguments: {
-          action: itemText.includes("列出") || itemText.includes("查看") || !itemText ? "list" : "add",
-          item: itemText
-        },
-        confidence: 0.95,
-        reasoning: "Heuristic: Detected todo command"
-      };
-    }
+    const trimmedPrompt = prompt.trim();
 
-    if (/^(查看待辦|列出待辦|待辦清單|待辦事項)/i.test(prompt)) {
+    // 3a. List Todos
+    if (/^(查看待辦|列出待辦|我的待辦|待辦事項|待辦清單|代辦清單|待辦有哪些|有哪些待辦|待辦|代辦|todo)$/i.test(trimmedPrompt)) {
       return {
         tool: "manage_todo",
         arguments: { action: "list" },
         confidence: 0.98,
         reasoning: "Heuristic: Detected todo list request"
+      };
+    }
+
+    // 3b. Add Todo (supports "新增待辦 ...", "幫我記待辦 ...", "待辦: ...", "提醒我 ...")
+    const todoAddMatch = trimmedPrompt.match(/^(?:(?:幫我|請幫我)?(?:新增|記一下|記|記錄)?(?:待辦|代辦|todo)|(?:幫我|請幫我)?提醒我)[:：\s]*(.+)$/i);
+    if (todoAddMatch) {
+      const itemText = todoAddMatch[1].trim();
+      if (["清單", "事項", "有哪些", "列表", "查看", "列出"].includes(itemText)) {
+        return {
+          tool: "manage_todo",
+          arguments: { action: "list" },
+          confidence: 0.98,
+          reasoning: "Heuristic: Detected todo list request"
+        };
+      }
+      return {
+        tool: "manage_todo",
+        arguments: {
+          action: "add",
+          item: itemText
+        },
+        confidence: 0.98,
+        reasoning: "Heuristic: Detected natural language todo add request"
       };
     }
 
