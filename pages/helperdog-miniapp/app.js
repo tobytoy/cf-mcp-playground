@@ -59,6 +59,7 @@ const DOM = {
   resultCard: document.getElementById("resultCard"),
   diarizationBody: document.getElementById("diarizationBody"),
   summaryContent: document.getElementById("summaryContent"),
+  summaryBox: document.getElementById("summaryBox"),
   copyBtn: document.getElementById("copyBtn"),
   shareLineBtn: document.getElementById("shareLineBtn"),
   
@@ -683,10 +684,22 @@ DOM.discardBtn.addEventListener("click", () => {
   showToast("已捨棄錄音");
 });
 
-DOM.copyBtn.addEventListener("click", () => {
+DOM.copyBtn.addEventListener("click", async () => {
   const text = DOM.diarizationBody.innerText + "\n\n" + DOM.summaryBox.innerText;
-  navigator.clipboard.writeText(text);
-  showToast("已複製逐字稿與摘要至剪貼簿！");
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("已複製逐字稿與摘要至剪貼簿！");
+  } catch {
+    // LINE in-app browser fallback: select a textarea
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;top:-9999px;left:-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    showToast("已複製逐字稿與摘要至剪貼簿！");
+  }
 });
 
 DOM.shareLineBtn.addEventListener("click", async () => {
