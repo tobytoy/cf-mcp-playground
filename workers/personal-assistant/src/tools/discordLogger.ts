@@ -14,18 +14,18 @@ export class DiscordLogger {
     this.webhookUrl = webhookUrl;
     this.kv = kv;
   }
-
   /**
    * Check if Info-level Discord logging is enabled in KV.
-   * Default: false (only Errors are sent unless user turned it on).
+   * Default: true (so user can observe all actions real-time in Discord).
    */
   async isInfoLoggingEnabled(): Promise<boolean> {
-    if (!this.kv) return false;
+    if (!this.kv) return true;
     try {
       const val = await this.kv.get("discord_info_enabled");
-      return val === "true";
+      if (val === "false") return false;
+      return true;
     } catch {
-      return false;
+      return true;
     }
   }
 
@@ -133,6 +133,49 @@ export class DiscordLogger {
     };
 
     return this.postToWebhook(payload);
+  }
+
+  /**
+   * Log an incoming webhook event to Discord in real-time.
+   */
+  async sendWebhookEvent(
+    event: Record<string, unknown>,
+    isAllowed: boolean,
+    reason?: string
+  ): Promise<boolean> {
+    const eventType = String(event.type || "unknown");
+    const source = (event.source as Record<string, unknown>) || {};
+    const senderId = String(source.userId || "unknown");
+    
+    let desc = `**事件類型**：\`${eventType}\`\n**LINE 使用者 ID**：\`${senderId}\``;
+
+    if (eventType === "message" && event.message) {
+      const msg = event.message as Record<string, unknown>;
+      const msgType = String(msg.type || "unknown");
+      if (msgType === "text") {
+        desc += `\n**文字內容**：\`${String(msg.text || "").slice(0, 100)}\``;
+      } else if (msgType === "location") {
+        desc += `\n**位置分享**：📍 ${msg.title || "未知"} (${msg.address || ""})`;
+      } else if (msgType === "image") {
+        desc += `\n**照片傳送**：📸 圖片 ID: \`${msg.id}\``;
+      } else {
+        desc += `\n**訊息類型**：\`${msgType}\``;
+      }
+    } else if (eventType === "postback" && event.postback) {
+      const pb = event.postback as Record<string, unknown>;
+      desc += `\n**點擊按鈕**：\`${String(pb.data || "")}\``;
+    }
+
+    const fields: DiscordField[] = [
+      { name: "白名單審查", value: isAllowed ? "✅ 授權通過" : `❌ 攔截阻擋 (原因: ${reason || "非白名單用戶"})`, inline: true }
+    ];
+
+    return this.sendInfo(
+      isAllowed ? "📨 收到 LINE 請求事件" : "⛔ 攔截非授權用戶",
+      desc,
+      fields,
+      true
+    );
   }
 
   private async postToWebhook(payload: Record<string, unknown>): Promise<boolean> {

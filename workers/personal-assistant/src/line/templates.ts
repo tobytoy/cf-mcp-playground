@@ -493,7 +493,7 @@ export function createLocationTransportFlexMessage(info: {
   address?: string;
   latitude: number;
   longitude: number;
-  weather?: { condition: string; rainProb: string; minTemp: string; maxTemp: string; comfort: string };
+  weather?: { condition: string; rainProb: string; minTemp: string; maxTemp: string; comfort: string; advice?: string };
   youbikes: Array<{ name: string; availableBikes: number; emptySpaces: number; distanceMeters: number }>;
   parkingLots: Array<{ name: string; availableSpaces: number; totalSpaces: number; hourlyRate?: number; distanceMeters: number }>;
   transitTips: string[];
@@ -518,19 +518,59 @@ export function createLocationTransportFlexMessage(info: {
     ]
   }));
 
+  const weatherBox = info.weather
+    ? [
+        {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: "#F0F9FF",
+          paddingAll: "md",
+          cornerRadius: "8px",
+          margin: "xs",
+          contents: [
+            {
+              type: "box",
+              layout: "horizontal",
+              contents: [
+                { type: "text", text: `☀️ ${info.weather.condition}`, weight: "bold", size: "sm", color: "#0369A1", flex: 3 },
+                { type: "text", text: `${info.weather.minTemp}°C ~ ${info.weather.maxTemp}°C`, size: "xs", color: "#0284C7", align: "end", flex: 2 }
+              ]
+            },
+            {
+              type: "text",
+              text: `降雨機率：${info.weather.rainProb} • 體感：${info.weather.comfort}`,
+              size: "xxs",
+              color: "#64748B",
+              margin: "xs"
+            },
+            {
+              type: "text",
+              text: `💡 穿衣建議：${info.weather.advice}`,
+              size: "xxs",
+              color: "#0284C7",
+              wrap: true,
+              margin: "xs"
+            }
+          ]
+        },
+        { type: "separator", margin: "md" }
+      ]
+    : [];
+
   return {
     type: "flex",
-    altText: `📍 【周邊交通】${info.locationTitle || "當前位置"} YouBike與停車位情報`,
+    altText: `📍 【007 位置與生活情報】${info.locationTitle || "當前位置"} YouBike與天氣`,
     contents: {
       type: "bubble",
+      size: "giga",
       header: {
         type: "box",
         layout: "vertical",
         backgroundColor: "#0284C7",
         paddingAll: "lg",
         contents: [
-          { type: "text", text: "📍 周邊 YouBike 與即時交通", color: "#FFFFFF", weight: "bold", size: "md" },
-          { type: "text", text: info.locationTitle, color: "#E0F2FE", size: "xs", margin: "xs" }
+          { type: "text", text: "📍 007 即時位置與生活情報", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: `${info.locationTitle || "當前定位"} • 即時氣象、YouBike與停車場`, color: "#E0F2FE", size: "xs", margin: "xs" }
         ]
       },
       body: {
@@ -538,11 +578,41 @@ export function createLocationTransportFlexMessage(info: {
         layout: "vertical",
         paddingAll: "lg",
         contents: [
-          { type: "text", text: "🚲 周邊 YouBike 2.0 站點：", weight: "bold", size: "xs", color: "#64748B" },
+          ...weatherBox,
+          { type: "text", text: "🚲 周邊 YouBike 2.0 站點：", weight: "bold", size: "xs", color: "#64748B", margin: "md" },
           ...youbikeRows,
           { type: "separator", margin: "md" },
           { type: "text", text: "🅿️ 周邊停車場即時車位：", weight: "bold", size: "xs", color: "#64748B", margin: "md" },
           ...parkingRows
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "horizontal",
+        spacing: "sm",
+        paddingAll: "md",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#0284C7",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "🗺️ Google 地圖導航",
+              uri: `https://www.google.com/maps/search/?api=1&query=${info.latitude},${info.longitude}`
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "📱 開啟生活 Mini App",
+              uri: "https://miniapp.line.me/2011472036-bVXeg5I6"
+            }
+          }
         ]
       }
     },
@@ -589,6 +659,176 @@ export function createSearchFlexMessage(
           { type: "separator", margin: "md" },
           { type: "text", text: "📚 參考資訊來源：", weight: "bold", size: "xs", color: "#64748B", margin: "md" },
           ...resultBoxes
+        ]
+      }
+    },
+    quickReply: DEFAULT_QUICK_REPLY
+  };
+}
+
+export function createMorningBriefingFlexMessage(info: {
+  dateStr: string;
+  timeStr: string;
+  weather: { condition: string; rainProb: string; tempRange: string; comfort: string; advice: string };
+  todoCount: number;
+  finance: {
+    usStocks: Array<{ symbol: string; name: string; price: number; changePercent: number }>;
+    crypto: Array<{ symbol: string; name: string; priceUsd: number; changePercent24h: number }>;
+  };
+  newsSummary: string;
+}): OutgoingLineMessage {
+  const usStockRows = info.finance.usStocks.slice(0, 4).map((s) => ({
+    type: "box",
+    layout: "horizontal",
+    contents: [
+      { type: "text", text: s.name, size: "xs", color: "#334155", flex: 3 },
+      { type: "text", text: `$${s.price}`, size: "xs", color: "#0F172A", align: "end", flex: 2 },
+      {
+        type: "text",
+        text: `${s.changePercent >= 0 ? "+" : ""}${s.changePercent}%`,
+        size: "xs",
+        weight: "bold",
+        color: s.changePercent >= 0 ? "#059669" : "#DC2626",
+        align: "end",
+        flex: 2
+      }
+    ]
+  }));
+
+  const cryptoRows = info.finance.crypto.slice(0, 2).map((c) => ({
+    type: "box",
+    layout: "horizontal",
+    contents: [
+      { type: "text", text: `${c.name} (${c.symbol})`, size: "xs", color: "#334155", flex: 3 },
+      { type: "text", text: `$${c.priceUsd.toLocaleString()}`, size: "xs", color: "#0F172A", align: "end", flex: 2 },
+      {
+        type: "text",
+        text: `${c.changePercent24h >= 0 ? "+" : ""}${c.changePercent24h}%`,
+        size: "xs",
+        weight: "bold",
+        color: c.changePercent24h >= 0 ? "#059669" : "#DC2626",
+        align: "end",
+        flex: 2
+      }
+    ]
+  }));
+
+  return {
+    type: "flex",
+    altText: `🌅 【007 晨間生活與美股早報】${info.dateStr} 07:00 天氣、待辦與美股走勢`,
+    contents: {
+      type: "bubble",
+      size: "giga",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#0284C7",
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "🌅 007 晨間生活與美股早報", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: ` 台灣時間 ${info.dateStr} ${info.timeStr}`, color: "#E0F2FE", size: "xs", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "lg",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                flex: 3,
+                contents: [
+                  { type: "text", text: "⛅ 今日天氣", size: "xs", color: "#0284C7", weight: "bold" },
+                  { type: "text", text: `${info.weather.condition} ｜ ${info.weather.tempRange}`, size: "xs", color: "#0F172A", margin: "xs" },
+                  { type: "text", text: `降雨率 ☔ ${info.weather.rainProb}`, size: "xs", color: parseInt(info.weather.rainProb) >= 30 ? "#DC2626" : "#059669" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                flex: 2,
+                contents: [
+                  { type: "text", text: "📋 生活待辦", size: "xs", color: "#059669", weight: "bold" },
+                  { type: "text", text: `${info.todoCount} 項進行中`, size: "sm", weight: "bold", color: "#10B981", margin: "xs" },
+                  { type: "text", text: "Google Sheet 同步", size: "xxs", color: "#64748B" }
+                ]
+              }
+            ]
+          },
+          { type: "separator", margin: "md" },
+          { type: "text", text: "📈 隔夜美股與加密走勢", weight: "bold", size: "xs", color: "#0284C7", margin: "md" },
+          ...usStockRows,
+          ...cryptoRows,
+          { type: "separator", margin: "md" },
+          { type: "text", text: "📰 今日重點要聞", weight: "bold", size: "xs", color: "#0284C7", margin: "md" },
+          { type: "text", text: info.newsSummary, wrap: true, size: "xs", color: "#334155", margin: "sm" }
+        ]
+      }
+    },
+    quickReply: DEFAULT_QUICK_REPLY
+  };
+}
+
+export function createStockBriefingFlexMessage(info: {
+  dateStr: string;
+  timeStr: string;
+  quotes: Array<{ symbol: string; name: string; price: number; change: number; changePercent: number }>;
+  summary: string;
+}): OutgoingLineMessage {
+  const quoteBoxes = info.quotes.map((q) => {
+    const isUp = q.change >= 0;
+    const color = isUp ? "#DC2626" : "#059669";
+    return {
+      type: "box",
+      layout: "horizontal",
+      margin: "sm",
+      contents: [
+        { type: "text", text: `${q.name} (${q.symbol.replace(".TW", "")})`, size: "xs", color: "#1E293B", flex: 3 },
+        { type: "text", text: `${q.price}`, size: "xs", weight: "bold", color: "#0F172A", align: "end", flex: 2 },
+        {
+          type: "text",
+          text: `${isUp ? "▲ +" : "▼ "}${q.changePercent.toFixed(2)}%`,
+          size: "xs",
+          weight: "bold",
+          color,
+          align: "end",
+          flex: 2
+        }
+      ]
+    };
+  });
+
+  return {
+    type: "flex",
+    altText: `📈 【台股收盤行情】${info.dateStr} 15:00 加權指數與權值股`,
+    contents: {
+      type: "bubble",
+      size: "giga",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#DC2626",
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "📈 007 台股收盤行情快報", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: ` 台灣時間 ${info.dateStr} ${info.timeStr}`, color: "#FEE2E2", size: "xs", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "📊 今日台股權值大盤表現：", weight: "bold", size: "xs", color: "#64748B" },
+          ...quoteBoxes,
+          { type: "separator", margin: "md" },
+          { type: "text", text: "💡 法人動向與盤後總結：", weight: "bold", size: "xs", color: "#DC2626", margin: "md" },
+          { type: "text", text: info.summary, wrap: true, size: "xs", color: "#334155", margin: "sm" }
         ]
       }
     },

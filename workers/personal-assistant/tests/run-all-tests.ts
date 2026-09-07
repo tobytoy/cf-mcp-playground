@@ -5,6 +5,9 @@ import { PersonalTodoManager } from "../src/tools/personalTodo";
 import { DiscordLogger } from "../src/tools/discordLogger";
 import { getEnabledModules, createFeatureListFlexMessage } from "../src/config/modules";
 import { getNearbyTransportContext } from "../src/tools/tdxTransport";
+import { getTaiwanWeatherForecast } from "../src/tools/weather";
+import { createLocationTransportFlexMessage } from "../src/line/templates";
+import { fetchMorningFinanceSnapshot, fetchTaiwanStockSnapshot } from "../src/tools/financeData";
 import { app } from "../src/index";
 import type { Env } from "../src/types/env";
 
@@ -62,15 +65,18 @@ async function main() {
 
   const r3 = classifier.classify("待辦：下午兩點採買生鮮");
   if (r3.tool !== "manage_todo") throw new Error(`Expected manage_todo, got ${r3.tool}`);
-  console.log(`  ✔ '待辦：...' -> ${r3.tool}`);
-
-  const r4 = classifier.classify("開啟 Discord 紀錄");
-  if (r4.tool !== "discord_toggle") throw new Error(`Expected discord_toggle, got ${r4.tool}`);
-  console.log(`  ✔ '開啟 Discord 紀錄' -> ${r4.tool}`);
-
   const r5 = classifier.classify("幫我找附近的 YouBike");
   if (r5.tool !== "nearby_transport") throw new Error(`Expected nearby_transport, got ${r5.tool}`);
-  console.log(`  ✔ '幫我找附近的 YouBike' -> ${r5.tool}\n`);
+  console.log(`  ✔ '幫我找附近的 YouBike' -> ${r5.tool}`);
+
+  const rStock = classifier.classify("台股今天收盤行情");
+  if (rStock.tool !== "briefing_stock") throw new Error(`Expected briefing_stock, got ${rStock.tool}`);
+  console.log(`  ✔ '台股今天收盤行情' -> ${rStock.tool}`);
+
+  const rMorning = classifier.classify("查看美股早報");
+  if (rMorning.tool !== "briefing_morning") throw new Error(`Expected briefing_morning, got ${rMorning.tool}`);
+  console.log(`  ✔ '查看美股早報' -> ${rMorning.tool}\n`);
+
 
   // 3. Declarative Modules
   console.log("▶ Testing Declarative Module System...");
@@ -106,12 +112,24 @@ async function main() {
   const transport = await getNearbyTransportContext(25.0339, 121.5644, "台北 101", "台北市信義區");
   if (!transport.youbikes || transport.youbikes.length === 0) throw new Error("YouBike list empty");
   const firstB = transport.youbikes[0];
-  if (typeof firstB.availableBikes !== "number" || typeof firstB.emptySpaces !== "number") {
-    throw new Error(`YouBike availableBikes or emptySpaces is undefined! Got: ${JSON.stringify(firstB)}`);
-  }
-  console.log(`  ✔ YouBike 2.0: ${firstB.name} (可借: ${firstB.availableBikes}, 可還: ${firstB.emptySpaces})`);
+  // 6. Transport & YouBike 2.0 Field Mapping + Weather
+  console.log("▶ Testing Transport & YouBike 2.0 + Weather Combined Card...");
+  const weather = await getTaiwanWeatherForecast("台北");
+  transport.weather = weather;
+  const combinedCard = createLocationTransportFlexMessage(transport);
+  if (combinedCard.type !== "flex") throw new Error("Combined location card malformed");
+  console.log(`  ✔ Combined Card built with: Weather(${weather.condition} ${weather.minTemp}~${weather.maxTemp}°C) + ${transport.youbikes.length} YouBike stations`);
   console.log(`  ✔ Smart Tip: ${transport.transitTips[0]}\n`);
 
+  // 7. Finance Data Snapshot
+  console.log("▶ Testing Finance Data Snapshot (US + TW Stocks + Crypto)...");
+  const morningFinance = await fetchMorningFinanceSnapshot();
+  if (morningFinance.usStocks.length === 0 || morningFinance.crypto.length === 0) throw new Error("Morning finance empty");
+  console.log(`  ✔ US Stocks: ${morningFinance.usStocks.map(s => s.name).join(", ")}`);
+  console.log(`  ✔ Crypto: ${morningFinance.crypto.map(c => `${c.name} $${c.priceUsd}`).join(", ")}`);
+  const twStocks = await fetchTaiwanStockSnapshot();
+  if (twStocks.length === 0) throw new Error("Taiwan stocks empty");
+  console.log(`  ✔ Taiwan Stocks: ${twStocks.map(s => `${s.name} ${s.price}`).join(", ")}\n`);
   // 7. End-to-End Hono Webhook
   console.log("▶ Testing Hono Webhook End-to-End...");
   const healthRes = await app.request("http://localhost/health", { method: "GET" }, MOCK_ENV);

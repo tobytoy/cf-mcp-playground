@@ -4,6 +4,9 @@ import type { LineWebhookPayload } from "../types/line";
 import { verifyLineSignature } from "../line/verifier";
 import { processLineEvent } from "../services/eventProcessor";
 import { transcribeAudio } from "../tools/voiceTranscribe";
+import { DiscordLogger } from "../tools/discordLogger";
+import { executeMorningBriefing } from "../cron/morningBriefing";
+import { executeStockBriefing } from "../cron/stockBriefing";
 
 export const webhookRouter = new Hono<{ Bindings: Env }>();
 
@@ -23,6 +26,24 @@ webhookRouter.get("/health", (c) => {
     service: "personal-assistant-worker",
     name: "HelperDog",
     timestamp: new Date().toISOString()
+  });
+});
+
+// Manual Cron Trigger for Testing
+webhookRouter.get("/cron/trigger", async (c) => {
+  const type = c.req.query("type") || "stock";
+  let success = false;
+
+  if (type === "morning") {
+    success = await executeMorningBriefing(c.env);
+  } else {
+    success = await executeStockBriefing(c.env);
+  }
+
+  return c.json({
+    status: success ? "success" : "failed",
+    type,
+    message: `Triggered ${type} briefing to bfg007 LINE bot.`
   });
 });
 
@@ -51,19 +72,34 @@ webhookRouter.post("/webhook", async (c) => {
 
   const events = payload.events || [];
 
+  const discord = new DiscordLogger(c.env.DISCORD_WEBHOOK_URL, c.env.PERSONAL_KV);
+
   // 2. Dispatch events asynchronously with ctx.waitUntil
   for (const event of events) {
     const senderId = event.source?.userId;
+    let isAllowed = true;
+    let blockReason = "";
 
     // Whitelist verification for Personal Assistant (supports comma-separated IDs)
     if (c.env.ALLOWED_USER_ID && senderId) {
       const allowedList = c.env.ALLOWED_USER_ID.split(",").map((s) => s.trim());
       if (!allowedList.includes(senderId)) {
-        console.warn(`[Webhook] Blocked unauthorized sender ID: ${senderId}`);
-        continue;
+        isAllowed = false;
+        blockReason = `使用者 ID (${senderId}) 不在允許清單中`;
       }
     }
 
+    // Real-time Discord notification for every incoming event
+    try {
+      c.executionCtx.waitUntil(discord.sendWebhookEvent(event as unknown as Record<string, unknown>, isAllowed, blockReason));
+    } catch {
+      await discord.sendWebhookEvent(event as unknown as Record<string, unknown>, isAllowed, blockReason);
+    }
+
+    if (!isAllowed) {
+      console.warn(`[Webhook] Blocked unauthorized sender ID: ${senderId}`);
+      continue;
+    }
     try {
       c.executionCtx.waitUntil(processLineEvent(event, c.env));
     } catch {

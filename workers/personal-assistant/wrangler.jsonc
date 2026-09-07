@@ -20,5 +20,11 @@
       "binding": "PERSONAL_KV",
       "id": "a2cec2fd0e1e46e09d215aaf6e46dc4f"
     }
-  ]
+  ],
+  "triggers": {
+    "crons": [
+      "0 23 * * *",
+      "0 7 * * 1-5"
+    ]
+  }
 }

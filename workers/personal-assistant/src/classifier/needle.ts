@@ -83,6 +83,25 @@ export class NeedleClassifier {
       };
     }
 
+    // 5b. Stock & Morning Briefings
+    if (/(台股|大盤|股市|收盤|股票)/i.test(trimmed)) {
+      return {
+        tool: "briefing_stock",
+        arguments: {},
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected Taiwan stock briefing request"
+      };
+    }
+
+    if (/(美股|早報|晨報|每日晨報)/i.test(trimmed)) {
+      return {
+        tool: "briefing_morning",
+        arguments: {},
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected morning briefing request"
+      };
+    }
+
     // 6. Transport & YouBike -> nearby_transport
     if (/(youbike|ubike|單車|找停車|停車位|公車|捷運|周邊交通|附近交通)/i.test(trimmed)) {
       return {

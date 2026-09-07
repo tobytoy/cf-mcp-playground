@@ -23,6 +23,8 @@ import { processImageOcrAndVault } from "../tools/ocrDriveVault";
 import { transcribeAudio } from "../tools/voiceTranscribe";
 import { generateAiResponse } from "../tools/aiChat";
 import { DiscordLogger } from "../tools/discordLogger";
+import { executeStockBriefing } from "../cron/stockBriefing";
+import { executeMorningBriefing } from "../cron/morningBriefing";
 
 export async function processLineEvent(event: LineEvent, env: Env): Promise<void> {
   const startTime = Date.now();
@@ -124,7 +126,11 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
     if (event.type === "message" && event.message.type === "location") {
       const loc = event.message;
       await locManager.saveLocation(userId, loc.latitude, loc.longitude, loc.title, loc.address);
-      const transportContext = await getNearbyTransportContext(loc.latitude, loc.longitude, loc.title, loc.address);
+      const [transportContext, weather] = await Promise.all([
+        getNearbyTransportContext(loc.latitude, loc.longitude, loc.title, loc.address),
+        getTaiwanWeatherForecast(loc.title || loc.address || "台北", env.CWA_API_KEY)
+      ]);
+      transportContext.weather = weather;
       await lineClient.replyOrPush(replyToken, userId, createLocationTransportFlexMessage(transportContext));
       return;
     }
@@ -201,6 +207,23 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
           break;
         }
 
+        // Transport & YouBike
+        case "nearby_transport": {
+          const userLoc = await locManager.getLocation(userId);
+          const [transport, weather] = await Promise.all([
+            getNearbyTransportContext(
+              userLoc.latitude,
+              userLoc.longitude,
+              userLoc.title,
+              userLoc.address
+            ),
+            getTaiwanWeatherForecast(userLoc.title || userLoc.address || "台北", env.CWA_API_KEY)
+          ]);
+          transport.weather = weather;
+          await lineClient.replyOrPush(replyToken, userId, createLocationTransportFlexMessage(transport));
+          break;
+        }
+
         // Weather
         case "weather_forecast": {
           const weather = await getTaiwanWeatherForecast(text, env.CWA_API_KEY);
@@ -208,16 +231,14 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
           break;
         }
 
-        // Transport & YouBike
-        case "nearby_transport": {
-          const userLoc = await locManager.getLocation(userId);
-          const transport = await getNearbyTransportContext(
-            userLoc.latitude,
-            userLoc.longitude,
-            userLoc.title,
-            userLoc.address
-          );
-          await lineClient.replyOrPush(replyToken, userId, createLocationTransportFlexMessage(transport));
+        // Stock & Market Briefings
+        case "briefing_stock": {
+          await executeStockBriefing(env, userId);
+          break;
+        }
+
+        case "briefing_morning": {
+          await executeMorningBriefing(env, userId);
           break;
         }
 
