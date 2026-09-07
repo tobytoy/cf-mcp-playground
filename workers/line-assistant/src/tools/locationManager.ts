@@ -11,13 +11,16 @@ export interface UserSavedLocation {
 // In-memory fallback for local dev / testing
 const memoryLocationStore = new Map<string, string>();
 
-export const DEFAULT_TIANMU_LOCATION: UserSavedLocation = {
-  latitude: 25.1119,
-  longitude: 121.5312,
-  title: "天母住家",
-  address: "台北市士林區天母忠誠路二段",
-  updatedAt: "系統預設"
+export const DEFAULT_MOTC_LOCATION: UserSavedLocation = {
+  latitude: 25.0385,
+  longitude: 121.5234,
+  title: "交通部",
+  address: "臺北市中正區仁愛路1段50號",
+  updatedAt: "系統預設 (上班常駐辦公室)"
 };
+
+export const DEFAULT_LOCATION = DEFAULT_MOTC_LOCATION;
+export const DEFAULT_TIANMU_LOCATION = DEFAULT_MOTC_LOCATION;
 
 export class LocationManager {
   private kv?: KVNamespace;
@@ -82,7 +85,7 @@ export class LocationManager {
       }
     }
 
-    return DEFAULT_TIANMU_LOCATION;
+    return DEFAULT_MOTC_LOCATION;
   }
 
   /**

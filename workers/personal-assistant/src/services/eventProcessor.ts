@@ -199,8 +199,14 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
     if (userText) {
       if (userId && !isVoice) await lineClient.showLoading(userId, 15);
 
-      const routing = classifier.classify(userText);
+      const userLoc = await locManager.getLocation(userId);
+      let effectiveText = userText;
 
+      if (locManager.hasRelativeLocationReference(userText)) {
+        effectiveText = locManager.enrichPromptWithLocation(userText, userLoc);
+      }
+
+      const routing = classifier.classify(userText);
       // Discord Info log of Needle routing
       await discord.sendInfo(
         "🤖 Needle 意圖路由分發",
@@ -289,7 +295,10 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
 
         // Weather
         case "weather_forecast": {
-          const weather = await getTaiwanWeatherForecast(userText, env.CWA_API_KEY);
+          const targetLoc = locManager.hasRelativeLocationReference(userText)
+            ? (userLoc.address || userLoc.title)
+            : userText;
+          const weather = await getTaiwanWeatherForecast(targetLoc, env.CWA_API_KEY);
           await lineClient.replyOrPush(replyToken, userId, createWeatherFlexMessage(weather));
           break;
         }
@@ -320,7 +329,7 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
         // Default: Chat with HelperDog
         case "ask_llm":
         default: {
-          const aiReply = await generateAiResponse(userText, env.GEMINI_API_KEY, "gemini-3.5-flash-lite");
+          const aiReply = await generateAiResponse(effectiveText, env.GEMINI_API_KEY, "gemini-3.5-flash-lite");
           const voicePrefix = isVoice ? `🎙️ 【語音辨識】：「${userText}」\n\n` : "";
           await lineClient.replyOrPush(replyToken, userId, {
             type: "text",
