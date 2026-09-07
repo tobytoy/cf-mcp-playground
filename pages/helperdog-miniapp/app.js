@@ -7,8 +7,8 @@
 const CONFIG = {
   DEFAULT_LIFF_ID: "2011472036-bVXeg5I6", // Developing LIFF ID
   WORKER_API_BASE: "https://personal-assistant-worker.tobywang2021.workers.dev",
-  // Google Apps Script Web App URL (to be populated once deployed by user)
-  GAS_API_URL: "",
+  // Google Apps Script Web App URL (Verified and active)
+  GAS_API_URL: "https://script.google.com/macros/s/AKfycbz9x2LZfeGuzzITB0iNf1r6RX8pRk55BcG8wdZtv6-nfLZiCX5dw5sPZCzGOrO4bjTwaA/exec",
 };
 
 // Global App State
@@ -393,9 +393,11 @@ async function loadDriveVault() {
     let files = [];
     if (CONFIG.GAS_API_URL) {
       const res = await fetch(`${CONFIG.GAS_API_URL}?type=files`);
-      if (res.ok) files = await res.json();
+      if (res.ok) {
+        const raw = await res.json();
+        files = raw.filter(f => f.id && String(f.id).startsWith("FILE-"));
+      }
     }
-
     if (files.length === 0) {
       // Use verified data from Google Sheet
       files = [
@@ -510,14 +512,38 @@ window.deleteVaultFile = async function(fileId) {
 // =============================================================================
 // 5. Tab 3: Personal Todos
 // =============================================================================
-function loadTodos() {
-  state.todos = [
-    { id: "TODO-001", item: "繳納本季健保與水電公用事業費用", category: "急件", status: "已完成", createdAt: "2026/09/01 09:30:00" },
-    { id: "TODO-002", item: "預約家庭年度健康檢查與牙醫回診", category: "家庭", status: "進行中", createdAt: "2026/09/03 11:00:00" },
-    { id: "TODO-003", item: "購買週末採買生活備品與生鮮食材", category: "生活", status: "已完成", createdAt: "2026/09/05 16:20:00" },
-    { id: "TODO-004", item: "彙整報稅憑證並上傳雲端硬碟備份", category: "急件", status: "進行中", createdAt: "2026/09/07 08:30:00" }
-  ];
-  renderTodoList("all");
+async function loadTodos() {
+  DOM.todoListContainer.innerHTML = `
+    <div class="loading-state">
+      <i class="fa-solid fa-spinner fa-spin"></i>
+      <p>正在載入待辦清單...</p>
+    </div>
+  `;
+
+  try {
+    let todos = [];
+    if (CONFIG.GAS_API_URL) {
+      const res = await fetch(`${CONFIG.GAS_API_URL}?type=todos`);
+      if (res.ok) {
+        const raw = await res.json();
+        todos = raw.filter(t => t.id && String(t.id).startsWith("TODO-"));
+      }
+    }
+
+    if (todos.length === 0) {
+      todos = [
+        { id: "TODO-001", item: "繳納本季健保與水電公用事業費用", category: "急件", status: "已完成", createdAt: "2026/09/01 09:30:00" },
+        { id: "TODO-002", item: "預約家庭年度健康檢查與牙醫回診", category: "家庭", status: "進行中", createdAt: "2026/09/03 11:00:00" },
+        { id: "TODO-003", item: "購買週末採買生活備品與生鮮食材", category: "生活", status: "已完成", createdAt: "2026/09/05 16:20:00" },
+        { id: "TODO-004", item: "彙整報稅憑證並上傳雲端硬碟備份", category: "急件", status: "進行中", createdAt: "2026/09/07 08:30:00" }
+      ];
+    }
+
+    state.todos = todos;
+    renderTodoList("all");
+  } catch (err) {
+    console.warn("Todos load fallback:", err);
+  }
 }
 
 function renderTodoList(filter = "all") {
@@ -537,7 +563,7 @@ function renderTodoList(filter = "all") {
         <input type="checkbox" ${isCompleted ? "checked" : ""} onchange="toggleTodo('${todo.id}')">
         <div>
           <div class="todo-text">${escapeHtml(todo.item)}</div>
-          <div class="todo-meta">[${todo.category}] • ${todo.createdAt.split(" ")[0]} • ${todo.id}</div>
+          <div class="todo-meta">[${todo.category}] • ${String(todo.createdAt || "").split("T")[0].split(" ")[0]} • ${todo.id}</div>
         </div>
       </div>
       <span class="file-badge">${todo.status}</span>
@@ -546,35 +572,67 @@ function renderTodoList(filter = "all") {
   });
 }
 
-window.toggleTodo = function(id) {
+window.toggleTodo = async function(id) {
   const item = state.todos.find(t => t.id === id);
   if (item) {
     item.status = item.status === "已完成" ? "進行中" : "已完成";
     renderTodoList("all");
     showToast(`待辦狀態已更新為：${item.status}`);
+
+    if (CONFIG.GAS_API_URL && item.status === "已完成") {
+      try {
+        await fetch(CONFIG.GAS_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "todo_complete", id })
+        });
+      } catch (e) {
+        console.warn("GAS todo_complete sync:", e);
+      }
+    }
   }
 };
 
-DOM.addTodoBtn.addEventListener("click", () => {
+DOM.addTodoBtn.addEventListener("click", async () => {
   const text = DOM.newTodoInput.value.trim();
   if (!text) return;
 
-  const nextId = `TODO-${String(state.todos.length + 1).padStart(3, "0")}`;
+  const category = DOM.todoCategorySelect.value;
+  const nextNum = state.todos.length + 1;
+  const nextId = `TODO-${String(nextNum).padStart(3, "0")}`;
   const now = new Date().toISOString().replace("T", " ").slice(0, 19);
 
-  state.todos.unshift({
+  const newTodo = {
     id: nextId,
     item: text,
-    category: DOM.todoCategorySelect.value,
+    category: category,
     status: "進行中",
     createdAt: now
-  });
+  };
 
+  state.todos.unshift(newTodo);
   DOM.newTodoInput.value = "";
   renderTodoList("all");
   showToast(`已新增待辦：${nextId}`);
-});
 
+  if (CONFIG.GAS_API_URL) {
+    try {
+      await fetch(CONFIG.GAS_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "todo_add",
+          item: text,
+          category: category,
+          status: "進行中",
+          timestamp: now
+        })
+      });
+    } catch (e) {
+      console.warn("GAS todo_add sync:", e);
+    }
+  }
+});
 // =============================================================================
 // 6. Navigation, Utilities & LINE Sharing
 // =============================================================================
