@@ -1,0 +1,24 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "personal-assistant-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-05-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1.0
+  },
+  "vars": {
+    "ENVIRONMENT": "production",
+    "GOOGLE_SHEET_APP_URL": "https://script.google.com/macros/s/AKfycbz9x2LZfeGuzzITB0iNf1r6RX8pRk55BcG8wdZtv6-nfLZiCX5dw5sPZCzGOrO4bjTwaA/exec",
+    "DISCORD_WEBHOOK_URL": "https://discord.com/api/webhooks/1546312112454893620/IRxVsk3EMy1RV5VWrnbCOCLJ52i2JOPLQFLC0AwO6Tu9MfrIt6XZInhl4WZbpSL5os_-"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "PERSONAL_KV",
+      "id": "a2cec2fd0e1e46e09d215aaf6e46dc4f"
+    }
+  ]
+}

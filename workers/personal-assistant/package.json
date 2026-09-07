@@ -1,0 +1,22 @@
+{
+  "name": "personal-assistant-worker",
+  "version": "1.0.0",
+  "description": "HelperDog — Personal Lifestyle Assistant LINE Bot on Cloudflare Workers with Gemini Vision OCR, Google Drive Vault, and Discord alerting",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "tsx tests/run-all-tests.ts"
+  },
+  "dependencies": {
+    "hono": "^4.7.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250224.0",
+    "@types/node": "^22.13.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.111.0"
+  }
+}

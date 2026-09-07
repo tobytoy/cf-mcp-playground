@@ -10,12 +10,15 @@
   "scripts": {
     "dev:transport": "npm run dev --workspace=workers/transport-mcp",
     "dev:line": "npm run dev --workspace=workers/line-assistant",
+    "dev:personal": "npm run dev --workspace=workers/personal-assistant",
     "deploy:transport": "npm run deploy --workspace=workers/transport-mcp",
     "deploy:line": "npm run deploy --workspace=workers/line-assistant",
-    "deploy:all": "npm run deploy --workspace=workers/transport-mcp && npm run deploy --workspace=workers/line-assistant",
+    "deploy:personal": "npm run deploy --workspace=workers/personal-assistant",
+    "deploy:all": "npm run deploy:transport && npm run deploy:line && npm run deploy:personal",
     "test:transport": "npm test --workspace=workers/transport-mcp",
     "test:line": "npm run test --workspace=workers/line-assistant",
-    "test:all": "npm run test:transport && npm run test:line"
+    "test:personal": "npm run test --workspace=workers/personal-assistant",
+    "test:all": "npm run test:transport && npm run test:line && npm run test:personal"
   },
   "devDependencies": {
     "typescript": "^5.7.3"
