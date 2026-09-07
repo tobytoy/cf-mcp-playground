@@ -28,7 +28,8 @@ const state = {
   audioUrl: null,
   activeTab: "tabVoice",
   files: [],
-  todos: []
+  todos: [],
+  activeFilter: "進行中"
 };
 
 // DOM Elements
@@ -540,13 +541,14 @@ async function loadTodos() {
     }
 
     state.todos = todos;
-    renderTodoList("all");
+    state.activeFilter = "進行中";
+    renderTodoList("進行中");
   } catch (err) {
     console.warn("Todos load fallback:", err);
   }
 }
 
-function renderTodoList(filter = "all") {
+function renderTodoList(filter = "進行中") {
   DOM.todoListContainer.innerHTML = "";
   
   const filtered = state.todos.filter(t => {
@@ -576,15 +578,15 @@ window.toggleTodo = async function(id) {
   const item = state.todos.find(t => t.id === id);
   if (item) {
     item.status = item.status === "已完成" ? "進行中" : "已完成";
-    renderTodoList("all");
+    renderTodoList(state.activeFilter || "進行中");
     showToast(`待辦狀態已更新為：${item.status}`);
 
-    if (CONFIG.GAS_API_URL && item.status === "已完成") {
+    if (CONFIG.GAS_API_URL) {
       try {
         await fetch(CONFIG.GAS_API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "todo_complete", id })
+          body: JSON.stringify({ action: "todo_complete", id, status: item.status })
         });
       } catch (e) {
         console.warn("GAS todo_complete sync:", e);
@@ -612,7 +614,7 @@ DOM.addTodoBtn.addEventListener("click", async () => {
 
   state.todos.unshift(newTodo);
   DOM.newTodoInput.value = "";
-  renderTodoList("all");
+  renderTodoList(state.activeFilter || "進行中");
   showToast(`已新增待辦：${nextId}`);
 
   if (CONFIG.GAS_API_URL) {
@@ -633,7 +635,17 @@ DOM.addTodoBtn.addEventListener("click", async () => {
     }
   }
 });
-// =============================================================================
+// Filter tab click binding (todos)
+document.querySelectorAll(".filter-tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const filter = btn.getAttribute("data-filter");
+    state.activeFilter = filter;
+    renderTodoList(filter);
+  });
+});
+
 // 6. Navigation, Utilities & LINE Sharing
 // =============================================================================
 document.querySelectorAll(".nav-item").forEach(item => {
