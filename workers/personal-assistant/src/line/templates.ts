@@ -606,8 +606,8 @@ export function createLocationTransportFlexMessage(info: {
             height: "sm",
             action: {
               type: "uri",
-              label: "🗺️ Google 地圖導航",
-              uri: `https://www.google.com/maps/search/?api=1&query=${info.latitude},${info.longitude}`
+              label: "🗺️ MOTC 交通導航",
+              uri: "https://miniapp.line.me/2011479506-1DIDNGJQ"
             }
           },
           {
