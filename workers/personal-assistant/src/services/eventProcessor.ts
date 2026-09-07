@@ -87,6 +87,50 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
     }
 
     // -------------------------------------------------------------------------
+    // 1b. File Document Messages (PDF, Docs -> Auto Drive Vault)
+    // -------------------------------------------------------------------------
+    if (event.type === "message" && event.message.type === "file") {
+      const fileMsg = event.message;
+      if (userId) await lineClient.showLoading(userId, 20);
+
+      const fileBuffer = await lineClient.getMessageContent(fileMsg.id);
+      if (!fileBuffer) {
+        await lineClient.replyOrPush(replyToken, userId, {
+          type: "text",
+          text: `📁 檔案「${fileMsg.fileName}」下載失敗，請重新傳送一次。`,
+          quickReply: DEFAULT_QUICK_REPLY
+        });
+        return;
+      }
+
+      const isPdf = fileMsg.fileName.toLowerCase().endsWith(".pdf");
+      const mimeType = isPdf ? "application/pdf" : "application/octet-stream";
+
+      const ocrResult = await processImageOcrAndVault(
+        fileBuffer,
+        mimeType,
+        env.GEMINI_API_KEY,
+        env.GOOGLE_SHEET_APP_URL
+      );
+
+      await discord.sendInfo(
+        "📁 收到文件檔案並歸檔至 Google Drive",
+        `檔名：\`${fileMsg.fileName}\` (${(fileMsg.fileSize / 1024).toFixed(1)} KB)\n單號：\`${ocrResult.fileId}\`\nDrive 連結：${ocrResult.fileUrl}`,
+        [
+          { name: "使用者", value: userId, inline: true },
+          { name: "耗時", value: `${Date.now() - startTime}ms`, inline: true }
+        ]
+      );
+
+      await lineClient.replyOrPush(replyToken, userId, {
+        type: "text",
+        text: `📁 【檔案已自動歸檔至 Google Drive】\n\n• 檔案名稱：${fileMsg.fileName}\n• 檔案大小：${(fileMsg.fileSize / 1024).toFixed(1)} KB\n• 儲存單號：${ocrResult.fileId}\n• 雲端連結：${ocrResult.fileUrl}\n\n已同步記錄於 Google Sheet 第二頁，您可在 Mini App 隨時檢視或管理！`,
+        quickReply: DEFAULT_QUICK_REPLY
+      });
+      return;
+    }
+
+    // -------------------------------------------------------------------------
     // 2. Location Pin Sharing Messages
     // -------------------------------------------------------------------------
     if (event.type === "message" && event.message.type === "location") {

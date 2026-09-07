@@ -56,8 +56,8 @@ export type LineMessageContent =
   | LineTextMessage
   | LineImageMessage
   | LineAudioMessage
-  | LineLocationMessage;
-
+  | LineLocationMessage
+  | LineFileMessage;
 export interface LineTextMessage {
   id: string;
   type: "text";
@@ -84,6 +84,13 @@ export interface LineLocationMessage {
   address: string;
   latitude: number;
   longitude: number;
+}
+
+export interface LineFileMessage {
+  id: string;
+  type: "file";
+  fileName: string;
+  fileSize: number;
 }
 
 export type OutgoingLineMessage =
