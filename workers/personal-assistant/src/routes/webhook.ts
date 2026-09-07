@@ -55,10 +55,13 @@ webhookRouter.post("/webhook", async (c) => {
   for (const event of events) {
     const senderId = event.source?.userId;
 
-    // Single-user whitelist verification for Personal Assistant
-    if (c.env.ALLOWED_USER_ID && senderId && senderId !== c.env.ALLOWED_USER_ID) {
-      console.warn(`[Webhook] Blocked unauthorized sender ID: ${senderId}`);
-      continue;
+    // Whitelist verification for Personal Assistant (supports comma-separated IDs)
+    if (c.env.ALLOWED_USER_ID && senderId) {
+      const allowedList = c.env.ALLOWED_USER_ID.split(",").map((s) => s.trim());
+      if (!allowedList.includes(senderId)) {
+        console.warn(`[Webhook] Blocked unauthorized sender ID: ${senderId}`);
+        continue;
+      }
     }
 
     try {
