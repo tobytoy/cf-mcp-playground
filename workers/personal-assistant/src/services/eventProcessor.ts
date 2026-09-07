@@ -41,6 +41,7 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
     // 0. Follow Event (New Friend / Unblock Greeting)
     // -------------------------------------------------------------------------
     if (event.type === "follow") {
+      await discord.sendInfo("👋 新好友加入關注", `使用者：\`${userId}\` 加入了 bfg007 私人生活助理！`);
       await lineClient.replyOrPush(replyToken, userId, createDashboardFlexMessage());
       return;
     }
@@ -70,10 +71,10 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
         env.GOOGLE_SHEET_APP_URL
       );
 
-      // Discord Info notification if enabled
+      // Discord Info notification
       await discord.sendInfo(
         "📸 圖片單據 OCR 歸檔完成",
-        `單號：\`${ocrResult.fileId}\`\n摘要：${ocrResult.summary}`,
+        `單號：\`${ocrResult.fileId}\`\n摘要：${ocrResult.summary}\nDrive 連結：${ocrResult.fileUrl}`,
         [
           { name: "使用者", value: userId, inline: true },
           { name: "耗時", value: `${Date.now() - startTime}ms`, inline: true }
@@ -86,42 +87,7 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
     }
 
     // -------------------------------------------------------------------------
-    // 2. Audio Voice Messages (Voice to Text + Speaker Diarization)
-    // -------------------------------------------------------------------------
-    if (event.type === "message" && event.message.type === "audio") {
-      const audioId = event.message.id;
-      if (userId) await lineClient.showLoading(userId, 20);
-
-      const audioBuffer = await lineClient.getMessageContent(audioId);
-      if (!audioBuffer) {
-        await lineClient.replyOrPush(replyToken, userId, {
-          type: "text",
-          text: "🎙️ 語音音訊下載失敗，請靠近麥克風再試一次。",
-          quickReply: DEFAULT_QUICK_REPLY
-        });
-        return;
-      }
-
-      const transcription = await transcribeAudio(audioBuffer, env.GEMINI_API_KEY, "audio/m4a", true);
-      if (!transcription.success || !transcription.text) {
-        await lineClient.replyOrPush(replyToken, userId, {
-          type: "text",
-          text: `🎙️ 語音辨識未能完成：${transcription.error || "請重試一次"}`,
-          quickReply: DEFAULT_QUICK_REPLY
-        });
-        return;
-      }
-
-      await lineClient.replyOrPush(replyToken, userId, {
-        type: "text",
-        text: `🎙️ 【語音逐字稿整理】：\n\n${transcription.text}\n\n💡 提示：點擊下方快速按鈕可將內容存為待辦！`,
-        quickReply: DEFAULT_QUICK_REPLY
-      });
-      return;
-    }
-
-    // -------------------------------------------------------------------------
-    // 3. Location Pin Sharing Messages
+    // 2. Location Pin Sharing Messages
     // -------------------------------------------------------------------------
     if (event.type === "message" && event.message.type === "location") {
       const loc = event.message;
@@ -131,18 +97,71 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
         getTaiwanWeatherForecast(loc.title || loc.address || "台北", env.CWA_API_KEY)
       ]);
       transportContext.weather = weather;
+
+      await discord.sendInfo(
+        "📍 收到位置資訊並產生生活情報",
+        `地點：\`${loc.title || "未知"}\` (${loc.latitude}, ${loc.longitude})\n地址：${loc.address || ""}\n天氣：${weather.condition} ${weather.minTemp}~${weather.maxTemp}°C`
+      );
+
       await lineClient.replyOrPush(replyToken, userId, createLocationTransportFlexMessage(transportContext));
       return;
     }
 
     // -------------------------------------------------------------------------
-    // 4. Text Messages
+    // 3. Audio Messages (Voice to Text) & Text Messages -> Unified into userText
     // -------------------------------------------------------------------------
-    if (event.type === "message" && event.message.type === "text") {
-      const text = event.message.text.trim();
-      if (userId) await lineClient.showLoading(userId, 15);
+    let userText = "";
+    let isVoice = false;
 
-      const routing = classifier.classify(text);
+    if (event.type === "message" && event.message) {
+      if (event.message.type === "audio") {
+        isVoice = true;
+        const audioId = event.message.id;
+        if (userId) await lineClient.showLoading(userId, 20);
+
+        const audioBuffer = await lineClient.getMessageContent(audioId);
+        if (!audioBuffer) {
+          await lineClient.replyOrPush(replyToken, userId, {
+            type: "text",
+            text: "🎙️ 語音音訊下載失敗，請靠近麥克風再試一次，或以文字輸入。",
+            quickReply: DEFAULT_QUICK_REPLY
+          });
+          return;
+        }
+
+        const transcription = await transcribeAudio(audioBuffer, env.GEMINI_API_KEY, "audio/m4a", true);
+        if (!transcription.success || !transcription.text) {
+          await lineClient.replyOrPush(replyToken, userId, {
+            type: "text",
+            text: `🎙️ 語音辨識未能完成：${transcription.error || "請重試一次"}`,
+            quickReply: DEFAULT_QUICK_REPLY
+          });
+          return;
+        }
+
+        userText = transcription.text.trim();
+        await discord.sendInfo(
+          "🎙️ 語音訊息轉寫完成",
+          `發送者：\`${userId}\`\n轉寫內容：\`${userText}\`\n準備進行 Needle 意圖分析與執行...`
+        );
+      } else if (event.message.type === "text" && typeof event.message.text === "string") {
+        userText = event.message.text.trim();
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Needle Intent Classification & Tool Dispatch
+    // -------------------------------------------------------------------------
+    if (userText) {
+      if (userId && !isVoice) await lineClient.showLoading(userId, 15);
+
+      const routing = classifier.classify(userText);
+
+      // Discord Info log of Needle routing
+      await discord.sendInfo(
+        "🤖 Needle 意圖路由分發",
+        `**輸入內容**：\`${userText}\`\n**分發工具**：\`${routing.tool}\` (信心度: ${routing.confidence})\n**使用者**：\`${userId}\``
+      );
 
       switch (routing.tool) {
         // Interactive Dashboard Card (bfg007 快捷操作卡片)
@@ -154,6 +173,16 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
         // List Supported Features
         case "list_features": {
           await lineClient.replyOrPush(replyToken, userId, createFeatureListFlexMessage("personal"));
+          break;
+        }
+
+        // OCR Inquiry
+        case "ocr_vault": {
+          await lineClient.replyOrPush(replyToken, userId, {
+            type: "text",
+            text: "📸 【拍照單據 OCR 與雲端存檔功能】：\n\n只要直接在對話中拍照或傳送圖片（發票、收據、公用事業繳費單、醫療收據或公文）：\n\n1. AI (Gemini Vision) 在 2 秒內辨識文字與應繳金額\n2. 自動備份上傳至 Google Drive\n3. 同步寫入您的 Google 試算表第二頁\n\n👉 您現在就可以直接拍一張收據或發票傳給我試試看喔！",
+            quickReply: DEFAULT_QUICK_REPLY
+          });
           break;
         }
 
@@ -171,19 +200,9 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
           break;
         }
 
-        // OCR Inquiry
-        case "ocr_vault": {
-          await lineClient.replyOrPush(replyToken, userId, {
-            type: "text",
-            text: "📸 【拍照單據 OCR 與雲端存檔功能】：\n\n只要直接在對話中拍照或傳送圖片（發票、收據、公用事業繳費單、醫療收據或公文）：\n\n1. AI (Gemini Vision) 在 2 秒內辨識文字與應繳金額\n2. 自動備份上傳至 Google Drive\n3. 同步寫入您的 Google 試算表第二頁\n\n👉 您現在就可以直接拍一張收據或發票傳給我試試看喔！",
-            quickReply: DEFAULT_QUICK_REPLY
-          });
-          break;
-        }
-
         // Calculator
         case "calculator": {
-          const expr = (routing.arguments.expression as string) || text;
+          const expr = (routing.arguments.expression as string) || userText;
           const calcResult = evaluateMathExpression(expr);
           await lineClient.replyOrPush(
             replyToken,
@@ -226,7 +245,7 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
 
         // Weather
         case "weather_forecast": {
-          const weather = await getTaiwanWeatherForecast(text, env.CWA_API_KEY);
+          const weather = await getTaiwanWeatherForecast(userText, env.CWA_API_KEY);
           await lineClient.replyOrPush(replyToken, userId, createWeatherFlexMessage(weather));
           break;
         }
@@ -244,7 +263,7 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
 
         // Search
         case "search_web": {
-          const query = (routing.arguments.query as string) || text;
+          const query = (routing.arguments.query as string) || userText;
           const searchRes = await executeTavilySearch(query, env.TAVILY_API_KEY, env.GEMINI_API_KEY);
           await lineClient.replyOrPush(
             replyToken,
@@ -257,10 +276,11 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
         // Default: Chat with HelperDog
         case "ask_llm":
         default: {
-          const aiReply = await generateAiResponse(text, env.GEMINI_API_KEY, "gemini-3.5-flash-lite");
+          const aiReply = await generateAiResponse(userText, env.GEMINI_API_KEY, "gemini-3.5-flash-lite");
+          const voicePrefix = isVoice ? `🎙️ 【語音辨識】：「${userText}」\n\n` : "";
           await lineClient.replyOrPush(replyToken, userId, {
             type: "text",
-            text: aiReply.text,
+            text: `${voicePrefix}${aiReply.text}`,
             quickReply: DEFAULT_QUICK_REPLY
           });
           break;

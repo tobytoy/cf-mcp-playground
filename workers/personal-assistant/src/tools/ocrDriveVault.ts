@@ -56,7 +56,7 @@ export async function processImageOcrAndVault(
       }
     };
 
-    const visionUrl = `${GEMINI_API_BASE}/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+    const visionUrl = `${GEMINI_API_BASE}/models/gemini-3.5-flash:generateContent?key=${geminiApiKey}`;
     const res = await fetch(visionUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -57,7 +57,7 @@ export async function transcribeAudio(
       }
     };
 
-    const url = `${GEMINI_API_BASE}/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const url = `${GEMINI_API_BASE}/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
