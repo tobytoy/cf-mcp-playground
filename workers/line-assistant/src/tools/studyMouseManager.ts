@@ -18,12 +18,23 @@ export class StudyMouseManager {
   private sheetUrl?: string;
   private lineClient?: LineClient;
   private adminUserId?: string;
+  private supabaseUrl?: string;
+  private supabaseKey?: string;
 
-  constructor(kv?: KVNamespace, sheetUrl?: string, lineClient?: LineClient, adminUserId?: string) {
+  constructor(
+    kv?: KVNamespace,
+    sheetUrl?: string,
+    lineClient?: LineClient,
+    adminUserId?: string,
+    supabaseUrl?: string,
+    supabaseKey?: string
+  ) {
     this.kv = kv;
     this.sheetUrl = sheetUrl;
     this.lineClient = lineClient;
     this.adminUserId = adminUserId;
+    this.supabaseUrl = supabaseUrl;
+    this.supabaseKey = supabaseKey;
   }
 
   /**
@@ -240,6 +251,32 @@ export class StudyMouseManager {
       }
     }
 
+    // 4. Dual-Sync to Supabase if configured
+    if (this.supabaseUrl && this.supabaseKey) {
+      try {
+        await fetch(`${this.supabaseUrl}/rest/v1/members`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": this.supabaseKey,
+            "Authorization": `Bearer ${this.supabaseKey}`,
+            "Prefer": "resolution=merge-duplicates"
+          },
+          body: JSON.stringify({
+            line_user_id: app.userId,
+            display_name: app.displayName,
+            status: "pending",
+            applied_ticket_id: app.ticketId,
+            target_exam: app.targetExam,
+            purpose: app.purpose,
+          }),
+          signal: AbortSignal.timeout(5000),
+        });
+      } catch (e) {
+        console.warn("[StudyMouseManager] Supabase member insert failed:", e);
+      }
+    }
+
     return { success: true, ticketId: app.ticketId };
   }
 
@@ -283,6 +320,29 @@ export class StudyMouseManager {
         });
       } catch (e) {
         console.warn("[StudyMouseManager] Sheet update failed:", e);
+      }
+    }
+
+    // 4. Dual-Sync to Supabase if configured
+    if (this.supabaseUrl && this.supabaseKey) {
+      try {
+        await fetch(`${this.supabaseUrl}/rest/v1/members?line_user_id=eq.${encodeURIComponent(targetUserId)}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": this.supabaseKey,
+            "Authorization": `Bearer ${this.supabaseKey}`,
+          },
+          body: JSON.stringify({
+            status: "active",
+            tier: "member",
+            approved_at: nowStr,
+            admin_notes: adminNote,
+          }),
+          signal: AbortSignal.timeout(5000),
+        });
+      } catch (e) {
+        console.warn("[StudyMouseManager] Supabase member update failed:", e);
       }
     }
 
@@ -334,5 +394,66 @@ export class StudyMouseManager {
       success: true,
       message: `❌ 已取消該申請：${ticketOrUserId}`,
     };
+  }
+
+  /**
+   * Save member feedback to KV, Google Sheet, and notify admin via LINE Push Message
+   */
+  async recordFeedback(feedback: {
+    userId: string;
+    displayName: string;
+    rating: number;
+    message: string;
+    page?: string;
+  }): Promise<{ success: boolean; id: string }> {
+    const id = `SM-FB-${Date.now()}`;
+    const timestamp = getTaiwanTimeString();
+
+    // 1. Store in KV
+    if (this.kv) {
+      await this.kv.put(`studymouse:feedback:${id}`, JSON.stringify({
+        ...feedback,
+        id,
+        createdAt: timestamp,
+      }), { expirationTtl: 86400 * 90 });
+    }
+
+    // 2. Sync to Google Sheet if configured
+    if (this.sheetUrl) {
+      try {
+        await fetch(this.sheetUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: AbortSignal.timeout(6000),
+          body: JSON.stringify({
+            action: "studymouse_feedback",
+            id,
+            userId: feedback.userId,
+            displayName: feedback.displayName,
+            rating: feedback.rating,
+            message: feedback.message,
+            page: feedback.page || "home",
+            createdAt: timestamp,
+          }),
+        });
+      } catch (e) {
+        console.warn("[StudyMouseManager] Sheet feedback post failed:", e);
+      }
+    }
+
+    // 3. Notify Admin via LINE Push Message
+    if (this.lineClient && this.adminUserId) {
+      try {
+        const stars = "⭐".repeat(Math.max(1, Math.min(5, feedback.rating)));
+        await this.lineClient.push(this.adminUserId, {
+          type: "text",
+          text: `🐭 【Study Mouse 考友意見】\n來自：${feedback.displayName}\n評分：${stars} (${feedback.rating}星)\n頁面：${feedback.page || "首頁"}\n\n意見內容：\n${feedback.message}`,
+        });
+      } catch (e) {
+        console.warn("[StudyMouseManager] Admin LINE feedback push failed:", e);
+      }
+    }
+
+    return { success: true, id };
   }
 }

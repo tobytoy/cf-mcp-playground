@@ -143,6 +143,42 @@ webhookRouter.post("/api/studymouse/apply", async (c) => {
     });
   }
 });
+webhookRouter.post("/api/studymouse/feedback", async (c) => {
+  try {
+    const body = await c.req.json() as {
+      userId: string;
+      displayName: string;
+      rating: number;
+      message: string;
+      page?: string;
+    };
+
+    if (!body.userId || !body.message) {
+      return c.json({ error: "Missing required fields" }, 400, {
+        "Access-Control-Allow-Origin": "*",
+      });
+    }
+
+    const lineClient = new LineClient(c.env.LINE_CHANNEL_ACCESS_TOKEN);
+    const manager = new StudyMouseManager(
+      c.env.ASSISTANT_KV,
+      c.env.GOOGLE_SHEET_APP_URL,
+      lineClient,
+      c.env.ALLOWED_USER_ID
+    );
+
+    const res = await manager.recordFeedback(body);
+    return c.json(res, 200, {
+      "Access-Control-Allow-Origin": "*",
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ error: msg }, 500, {
+      "Access-Control-Allow-Origin": "*",
+    });
+  }
+});
+
 
 webhookRouter.get("/api/studymouse/status", async (c) => {
   const userId = c.req.query("userId");

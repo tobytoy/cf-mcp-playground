@@ -88,8 +88,10 @@ async function fetchNearbyYouBike(lat: number, lon: number): Promise<Array<{
 
     const stations = (await res.json()) as Array<{
       sna: string; // 站點名稱 (如 "YouBike2.0_捷運台北車站(M4出口)")
-      sbi: number; // 可借車輛數
-      bemp: number; // 可還空位數
+      sbi?: number;
+      bemp?: number;
+      available_rent_bikes?: number;
+      available_return_bikes?: number;
       latitude: number;
       longitude: number;
       act: string; // 營運狀態 1: 正常
@@ -99,10 +101,12 @@ async function fetchNearbyYouBike(lat: number, lon: number): Promise<Array<{
       .filter((s) => s.act === "1" && s.latitude && s.longitude)
       .map((s) => {
         const dist = calculateDistanceMeters(lat, lon, s.latitude, s.longitude);
+        const availableBikes = s.available_rent_bikes ?? s.sbi ?? 0;
+        const emptySpaces = s.available_return_bikes ?? s.bemp ?? 0;
         return {
           name: s.sna.replace(/^YouBike2\.0_/, ""),
-          availableBikes: s.sbi,
-          emptySpaces: s.bemp,
+          availableBikes,
+          emptySpaces,
           distanceMeters: dist
         };
       })

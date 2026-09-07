@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>HelperDog — 私人生活助理 & 語音轉文字工作室</title>
+  
+  <!-- LINE LIFF SDK -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top App Bar -->
+    <header class="app-header">
+      <div class="user-badge" id="userBadge">
+        <div class="avatar-wrap">
+          <img id="userAvatar" src="https://via.placeholder.com/40" alt="Avatar">
+          <span class="online-indicator"></span>
+        </div>
+        <div class="user-info">
+          <h1 class="user-name" id="userName">載入中...</h1>
+          <span class="app-subtitle" id="envBadge">🐶 HelperDog 個人助理</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="refreshBtn" title="重新整理"><i class="fa-solid fa-rotate-right"></i></button>
+        <button class="icon-btn" id="closeLiffBtn" title="關閉視窗"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </header>
+
+    <!-- Main Tab Content Area -->
+    <main class="main-content">
+      
+      <!-- ================================================================= -->
+      <!-- TAB 1: 🎙️ 語音轉文字 (Voice2Text Studio + Speaker Diarization) -->
+      <!-- ================================================================= -->
+      <section id="tabVoice" class="tab-pane active">
+        <!-- Status Indicator Card -->
+        <div class="recorder-card">
+          <div class="recording-status-bar" id="statusBar">
+            <span class="status-dot" id="statusDot"></span>
+            <span class="status-text" id="statusText">準備就緒，點擊下方開始錄音</span>
+            <span class="timer" id="recordingTimer">00:00</span>
+          </div>
+
+          <!-- Live Visualizer Waves (8 Dynamic Frequency Bars) -->
+          <div class="visualizer-container" id="visualizerContainer">
+            <div class="v-bar" style="height: 15%"></div>
+            <div class="v-bar" style="height: 30%"></div>
+            <div class="v-bar" style="height: 50%"></div>
+            <div class="v-bar" style="height: 80%"></div>
+            <div class="v-bar" style="height: 65%"></div>
+            <div class="v-bar" style="height: 40%"></div>
+            <div class="v-bar" style="height: 25%"></div>
+            <div class="v-bar" style="height: 15%"></div>
+          </div>
+
+          <!-- Audio Level Decibel Meter (收音檢測) -->
+          <div class="mic-level-meter">
+            <span class="meter-label"><i class="fa-solid fa-microphone-lines"></i> 麥克風音量</span>
+            <div class="meter-bar-bg">
+              <div class="meter-bar-fill" id="meterBarFill"></div>
+            </div>
+            <span class="meter-val" id="meterVal">0 dB</span>
+          </div>
+
+          <!-- Recorder Controls -->
+          <div class="recorder-controls">
+            <button class="ctrl-btn sub-btn" id="pauseBtn" disabled title="暫停">
+              <i class="fa-solid fa-pause"></i>
+            </button>
+            <button class="ctrl-btn main-record-btn" id="recordBtn" title="開始錄音">
+              <i class="fa-solid fa-microphone"></i>
+            </button>
+            <button class="ctrl-btn sub-btn" id="stopBtn" disabled title="停止並完成">
+              <i class="fa-solid fa-stop"></i>
+            </button>
+          </div>
+          
+          <p class="recorder-hint" id="recorderHint">💡 支援多人對話，AI 將自動辨識並區分不同說話者</p>
+
+          <!-- Audio Playback Preview (Hidden until recorded) -->
+          <div class="audio-playback-card" id="playbackCard" style="display: none;">
+            <div class="playback-header">
+              <span><i class="fa-solid fa-play"></i> 錄音試聽預覽</span>
+              <button class="text-btn danger" id="discardBtn">捨棄重錄</button>
+            </div>
+            <audio id="audioPlayer" controls></audio>
+            <button class="primary-btn pulse" id="transcribeBtn">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> 產生 AI 說話者辨識逐字稿
+            </button>
+          </div>
+        </div>
+
+        <!-- Transcription Result Card -->
+        <div class="transcription-result-card" id="resultCard" style="display: none;">
+          <div class="result-header">
+            <h3><i class="fa-solid fa-comments"></i> 說話者逐字稿與會議結論</h3>
+            <div class="action-btn-group">
+              <button class="pill-btn" id="copyBtn"><i class="fa-regular fa-copy"></i> 複製</button>
+              <button class="pill-btn highlight" id="shareLineBtn"><i class="fa-brands fa-line"></i> 傳至 LINE</button>
+            </div>
+          </div>
+          <div class="diarization-body" id="diarizationBody">
+            <!-- Dynamic Bubbles Inserted Here -->
+          </div>
+          <div class="summary-box" id="summaryBox">
+            <h4><i class="fa-solid fa-lightbulb"></i> AI 重點摘要與行動待辦</h4>
+            <div id="summaryContent"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB 2: 📁 雲端硬碟檔案倉庫 (Drive Vault & OCR 檢視) -->
+      <!-- ================================================================= -->
+      <section id="tabFiles" class="tab-pane">
+        <!-- Drive Vault Stats Banner -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-num" id="statTotalFiles">0</span>
+            <span class="stat-name">總收納檔案</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num" id="statImages">0</span>
+            <span class="stat-name">圖片/單據</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num" id="statPdfs">0</span>
+            <span class="stat-name">PDF 文件</span>
+          </div>
+        </div>
+
+        <div class="section-title-bar">
+          <h3><i class="fa-solid fa-folder-open"></i> 檔案與 OCR 辨識庫</h3>
+          <span class="sync-status" id="sheetSyncStatus"><i class="fa-solid fa-check"></i> 同步正常</span>
+        </div>
+
+        <!-- File List (Dynamic Cards) -->
+        <div class="files-container" id="filesContainer">
+          <div class="loading-state">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>正在載入 Google Drive 與 Sheet 資料...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB 3: 📝 個人待辦事項 (Todos) -->
+      <!-- ================================================================= -->
+      <section id="tabTodos" class="tab-pane">
+        <div class="todo-quick-add">
+          <input type="text" id="newTodoInput" placeholder="新增待辦事項 (如：下午兩點線上會議)...">
+          <select id="todoCategorySelect">
+            <option value="生活">生活</option>
+            <option value="急件">急件</option>
+            <option value="家庭">家庭</option>
+          </select>
+          <button class="add-btn" id="addTodoBtn"><i class="fa-solid fa-plus"></i></button>
+        </div>
+
+        <div class="todo-filter-tabs">
+          <button class="filter-tab active" data-filter="all">全部</button>
+          <button class="filter-tab" data-filter="進行中">進行中</button>
+          <button class="filter-tab" data-filter="已完成">已完成</button>
+        </div>
+
+        <div class="todo-list-container" id="todoListContainer">
+          <div class="loading-state">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>正在載入待辦清單...</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-tab="tabVoice">
+        <i class="fa-solid fa-microphone-lines"></i>
+        <span>語音錄音</span>
+      </button>
+      <button class="nav-item" data-tab="tabFiles">
+        <i class="fa-solid fa-hard-drive"></i>
+        <span>檔案倉庫</span>
+      </button>
+      <button class="nav-item" data-tab="tabTodos">
+        <i class="fa-solid fa-list-check"></i>
+        <span>生活待辦</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Toast Notification Modal -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>
