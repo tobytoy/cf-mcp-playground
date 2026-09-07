@@ -11,6 +11,7 @@ import { testLocationManager } from "./location.test";
 import { testLineFormatter } from "./formatter.test";
 import { testCronAndMarketBriefings } from "./cron.test";
 import { testOfficialRailFares } from "./fares.test";
+import { testTodoMemoManager } from "./todo.test";
 async function main() {
   console.log("==========================================");
   console.log("🚀 LINE Assistant Worker Test Suite");
@@ -30,6 +31,7 @@ async function main() {
     testLineFormatter();
     await testCronAndMarketBriefings();
     await testOfficialRailFares();
+    await testTodoMemoManager();
 
     console.log("==========================================");
     console.log("🎉 ALL TESTS PASSED SUCCESSFULLY!");
