@@ -4,6 +4,26 @@ export class NeedleClassifier {
   classify(prompt: string): RoutingResult {
     const trimmed = prompt.trim();
 
+    // 0. Interactive Dashboard Card -> dashboard
+    if (/^(選單|menu|卡片|快捷|控制台|開始|主選單|首頁|哈囉|hi|hello|你好|您好)$/i.test(trimmed) || /(快捷鍵|快捷功能|操作卡片)/i.test(trimmed)) {
+      return {
+        tool: "dashboard",
+        arguments: {},
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected interactive dashboard menu request"
+      };
+    }
+    // 1. OCR Inquiry -> ocr_vault
+    if (/(拍照單據|拍照功能|照片辨識|ocr|發票功能|收據功能)/i.test(trimmed)) {
+      return {
+        tool: "ocr_vault",
+        arguments: {},
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected OCR inquiry"
+      };
+    }
+
+
     // 1. Feature List / Help -> list_features
     if (/(功能|你會做什麼|你能做什麼|help|指令|服務項目|支援什麼|清單|目錄|說明)/i.test(trimmed)) {
       return {

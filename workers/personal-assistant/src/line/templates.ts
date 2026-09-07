@@ -48,6 +48,183 @@ export const DEFAULT_QUICK_REPLY: LineQuickReply = {
 };
 
 /**
+ * Interactive Dashboard Card for bfg007 (點擊卡片直接生效免打字).
+ */
+export function createDashboardFlexMessage(): OutgoingLineMessage {
+  return {
+    type: "flex",
+    altText: "🐶 【bfg007 私人生活助理】快捷互動控制台",
+    contents: {
+      type: "bubble",
+      size: "giga",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#4F46E5",
+        paddingAll: "lg",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🐶 bfg007 私人生活助理", weight: "bold", size: "md", color: "#FFFFFF", flex: 4 },
+              { type: "text", text: "快捷控制台", size: "xs", color: "#C7D2FE", align: "end", flex: 2 }
+            ]
+          },
+          {
+            type: "text",
+            text: "點擊下方卡片即可直接觸發各項生活服務 (免打字秒速回應)",
+            size: "xxs",
+            color: "#E0E7FF",
+            margin: "xs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "md",
+        spacing: "md",
+        contents: [
+          // Row 1
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "md",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#EEF2FF",
+                paddingAll: "md",
+                cornerRadius: "10px",
+                flex: 1,
+                action: { type: "message", text: "查看待辦清單" },
+                contents: [
+                  { type: "text", text: "📝 生活待辦", weight: "bold", size: "sm", color: "#3730A3" },
+                  { type: "text", text: "查看與新增待辦", size: "xxs", color: "#6366F1", margin: "xs" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F0FDF4",
+                paddingAll: "md",
+                cornerRadius: "10px",
+                flex: 1,
+                action: { type: "message", text: "幫我找附近的 YouBike" },
+                contents: [
+                  { type: "text", text: "🚲 找 YouBike", weight: "bold", size: "sm", color: "#166534" },
+                  { type: "text", text: "周邊站點可借可還", size: "xxs", color: "#15803D", margin: "xs" }
+                ]
+              }
+            ]
+          },
+          // Row 2
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "md",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F0F9FF",
+                paddingAll: "md",
+                cornerRadius: "10px",
+                flex: 1,
+                action: { type: "message", text: "今天天氣如何？會下雨嗎" },
+                contents: [
+                  { type: "text", text: "☀️ 即時天氣", weight: "bold", size: "sm", color: "#075985" },
+                  { type: "text", text: "降雨機率與穿衣", size: "xxs", color: "#0284C7", margin: "xs" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FEF3C7",
+                paddingAll: "md",
+                cornerRadius: "10px",
+                flex: 1,
+                action: { type: "uri", uri: "https://miniapp.line.me/2011472036-bVXeg5I6" },
+                contents: [
+                  { type: "text", text: "🎙️ 語音轉文字", weight: "bold", size: "sm", color: "#92400E" },
+                  { type: "text", text: "開啟 Mini App 錄音", size: "xxs", color: "#B45309", margin: "xs" }
+                ]
+              }
+            ]
+          },
+          // Row 3
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "md",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#ECFDF5",
+                paddingAll: "md",
+                cornerRadius: "10px",
+                flex: 1,
+                action: { type: "message", text: "📸 拍照單據功能" },
+                contents: [
+                  { type: "text", text: "📸 拍照 OCR", weight: "bold", size: "sm", color: "#065F46" },
+                  { type: "text", text: "直接傳照片存 Drive", size: "xxs", color: "#059669", margin: "xs" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FDF2F8",
+                paddingAll: "md",
+                cornerRadius: "10px",
+                flex: 1,
+                action: { type: "message", text: "開啟 Discord 紀錄" },
+                contents: [
+                  { type: "text", text: "🔔 Discord 監控", weight: "bold", size: "sm", color: "#9D174D" },
+                  { type: "text", text: "切換即時告警日誌", size: "xxs", color: "#BE185D", margin: "xs" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "horizontal",
+        spacing: "sm",
+        paddingAll: "md",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#4F46E5",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "📱 開啟 Mini App 檔案庫",
+              uri: "https://miniapp.line.me/2011472036-bVXeg5I6"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            action: {
+              type: "message",
+              label: "📋 完整功能清單",
+              text: "功能"
+            }
+          }
+        ]
+      }
+    },
+    quickReply: DEFAULT_QUICK_REPLY
+  };
+}
+
+/**
  * Flex Message for Photo OCR & Drive Vault Result.
  */
 export function createOcrVaultFlexMessage(result: OcrResult): OutgoingLineMessage {

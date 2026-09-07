@@ -2,6 +2,7 @@ import type { Env } from "../types/env";
 import type { LineEvent } from "../types/line";
 import { LineClient } from "../line/client";
 import {
+  createDashboardFlexMessage,
   createOcrVaultFlexMessage,
   createTodoFlexMessage,
   createCalculatorFlexMessage,
@@ -34,6 +35,14 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
   const replyToken = "replyToken" in event ? event.replyToken : undefined;
 
   try {
+    // -------------------------------------------------------------------------
+    // 0. Follow Event (New Friend / Unblock Greeting)
+    // -------------------------------------------------------------------------
+    if (event.type === "follow") {
+      await lineClient.replyOrPush(replyToken, userId, createDashboardFlexMessage());
+      return;
+    }
+
     // -------------------------------------------------------------------------
     // 1. Image Messages (Auto OCR & Drive Vault)
     // -------------------------------------------------------------------------
@@ -130,6 +139,12 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
       const routing = classifier.classify(text);
 
       switch (routing.tool) {
+        // Interactive Dashboard Card (bfg007 快捷操作卡片)
+        case "dashboard": {
+          await lineClient.replyOrPush(replyToken, userId, createDashboardFlexMessage());
+          break;
+        }
+
         // List Supported Features
         case "list_features": {
           await lineClient.replyOrPush(replyToken, userId, createFeatureListFlexMessage("personal"));
@@ -145,6 +160,16 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
             text: isEnable
               ? "🔔 已成功「開啟」Discord 日誌紀錄！後續的對話與操作摘要將同步轉發至您的 Discord 頻道。"
               : "🔕 已「關閉」Discord 一般訊息紀錄，僅保留重大異常錯誤告警。",
+            quickReply: DEFAULT_QUICK_REPLY
+          });
+          break;
+        }
+
+        // OCR Inquiry
+        case "ocr_vault": {
+          await lineClient.replyOrPush(replyToken, userId, {
+            type: "text",
+            text: "📸 【拍照單據 OCR 與雲端存檔功能】：\n\n只要直接在對話中拍照或傳送圖片（發票、收據、公用事業繳費單、醫療收據或公文）：\n\n1. AI (Gemini Vision) 在 2 秒內辨識文字與應繳金額\n2. 自動備份上傳至 Google Drive\n3. 同步寫入您的 Google 試算表第二頁\n\n👉 您現在就可以直接拍一張收據或發票傳給我試試看喔！",
             quickReply: DEFAULT_QUICK_REPLY
           });
           break;

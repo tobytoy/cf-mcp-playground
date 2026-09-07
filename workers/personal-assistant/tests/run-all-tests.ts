@@ -47,10 +47,15 @@ async function main() {
   // 2. Needle Classifier
   console.log("▶ Testing Needle Classifier for Personal Assistant...");
   const classifier = new NeedleClassifier();
-  const r1 = classifier.classify("功能");
-  if (r1.tool !== "list_features") throw new Error(`Expected list_features, got ${r1.tool}`);
-  console.log(`  ✔ '功能' -> ${r1.tool}`);
+  const r0 = classifier.classify("選單");
+  if (r0.tool !== "dashboard") throw new Error(`Expected dashboard, got ${r0.tool}`);
+  console.log(`  ✔ '選單' -> ${r0.tool}`);
 
+  const rOcr = classifier.classify("拍照單據功能");
+  if (rOcr.tool !== "ocr_vault") throw new Error(`Expected ocr_vault, got ${rOcr.tool}`);
+  console.log(`  ✔ '拍照單據功能' -> ${rOcr.tool}`);
+
+  const r1 = classifier.classify("功能");
   const r2 = classifier.classify("你能做什麼");
   if (r2.tool !== "list_features") throw new Error(`Expected list_features, got ${r2.tool}`);
   console.log(`  ✔ '你能做什麼' -> ${r2.tool}`);
