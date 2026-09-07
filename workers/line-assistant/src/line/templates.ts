@@ -5,6 +5,13 @@ export const DEFAULT_QUICK_REPLY: LineQuickReply = {
     {
       type: "action",
       action: {
+        type: "location",
+        label: "📍 一鍵傳送位置"
+      }
+    },
+    {
+      type: "action",
+      action: {
         type: "message",
         label: "📝 待辦清單",
         text: "查看待辦事項"
