@@ -18,10 +18,10 @@ export const WEIGHTED_STRONG_POOL = [
 export const WEIGHTED_LIGHT_POOL = [
   "gemini-3.1-flash-lite", // 1
   "gemini-3.1-flash-lite", // 2
-  "gemini-2.5-flash",      // 3
+  "gemini-3.5-flash-lite", // 3
   "gemini-3.1-flash-lite", // 4
   "gemini-3.1-flash-lite", // 5
-  "gemini-2.5-flash",      // 6
+  "gemini-3.5-flash-lite", // 6
   "gemini-3.1-flash-lite", // 7
   "gemini-3.1-flash-lite"  // 8
 ] as const;
@@ -32,13 +32,13 @@ export const WEIGHTED_BALANCED_POOL = [
   "gemini-3.8-flash",      // 3
   "gemini-3.1-flash-lite", // 4
   "gemini-3.7-flash",      // 5
-  "gemini-2.5-flash",      // 6
+  "gemini-3.5-flash",      // 6
   "gemini-3.5-flash-lite", // 7
   "gemini-3.1-flash-lite", // 8
   "gemini-3.6-flash",      // 9
   "gemini-3.1-flash-lite", // 10
   "gemini-3.5-flash",      // 11
-  "gemini-2.5-flash"       // 12
+  "gemini-3.5-flash-lite"  // 12
 ] as const;
 
 export type StrongModel = (typeof WEIGHTED_STRONG_POOL)[number];

@@ -9,6 +9,7 @@ export interface Env {
   GOOGLE_SHEET_APP_URL?: string;
   SUPABASE_URL?: string;
   SUPABASE_KEY?: string;
+  DISCORD_WEBHOOK_URL?: string;
   // Secrets
   LINE_CHANNEL_SECRET: string;
   LINE_CHANNEL_ACCESS_TOKEN: string;

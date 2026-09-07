@@ -36,7 +36,7 @@ import { executeMorningBriefing } from "../cron/morningBriefing";
 import { executeStockBriefing } from "../cron/stockBriefing";
 import { executeGithubBriefing } from "../cron/githubBriefing";
 import { extractRouteOD, lookupOfficialRailFare, formatOfficialFareContext, updateOfficialRailFares } from "../tools/railFares";
-
+import { DiscordLogger } from "../tools/discordLogger";
 export async function processLineEvent(event: LineEvent, env: Env): Promise<void> {
   const startTime = Date.now();
   const lineClient = new LineClient(env.LINE_CHANNEL_ACCESS_TOKEN);
@@ -46,9 +46,9 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
   const analytics = new AnalyticsManager(env.ASSISTANT_KV);
   const locManager = new LocationManager(env.ASSISTANT_KV);
   const diagLogger = new DiagnosticLogger(env.ASSISTANT_KV);
+  const discord = new DiscordLogger(env.DISCORD_WEBHOOK_URL, env.ASSISTANT_KV);
   const userId = event.source.userId || "anonymous";
   const replyToken = event.replyToken;
-
   const stageLogs: string[] = [];
 
   try {
@@ -180,6 +180,12 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
       stageLogs.push(`Routed to [${routing.tool}] in ${Date.now() - routingStart}ms (conf: ${routing.confidence})`);
 
       // Record usage statistics
+      // Log Needle intent to Discord
+      await discord.sendInfo(
+        "🐱 小貓 Needle 意圖分發",
+        `**提問內容**：\`${userText}\`\n**分發工具**：\`${routing.tool}\` (信心度: ${routing.confidence})\n**使用者**：\`${userId}\``
+      );
+
       await analytics.recordUsage(userId, routing.tool, userText, routing.target_model);
 
       // Dispatch to Tool
@@ -459,6 +465,12 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
     const errorMsg = error instanceof Error ? error.message : String(error);
     stageLogs.push(`ERROR: ${errorMsg}`);
     console.error("[EventProcessor] Error handling LINE event:", error);
+
+    await discord.sendError("小貓事件處理異常", errorMsg, {
+      userId,
+      eventType: event.type,
+      durationMs: Date.now() - startTime
+    });
 
     await diagLogger.log({
       durationMs: Date.now() - startTime,

@@ -4,6 +4,7 @@ import type { LineWebhookPayload } from "../types/line";
 import { verifyLineSignature } from "../line/verifier";
 import { processLineEvent } from "../services/eventProcessor";
 import { DiagnosticLogger } from "../tools/diagnostics";
+import { DiscordLogger } from "../tools/discordLogger";
 import { executeMorningBriefing } from "../cron/morningBriefing";
 import { executeStockBriefing } from "../cron/stockBriefing";
 import { executeGithubBriefing } from "../cron/githubBriefing";
@@ -19,10 +20,15 @@ webhookRouter.post("/webhook", async (c) => {
     return c.text("Missing x-line-signature header", 400);
   }
 
-  // 1. Verify LINE Webhook HMAC-SHA256 signature
   const isValid = await verifyLineSignature(rawBody, signature, c.env.LINE_CHANNEL_SECRET);
   if (!isValid) {
     console.warn("[Webhook] Invalid signature detected. Request rejected.");
+    const discord = new DiscordLogger(c.env.DISCORD_WEBHOOK_URL, c.env.ASSISTANT_KV);
+    try {
+      c.executionCtx.waitUntil(discord.sendError("小貓 Webhook 簽章驗證失敗 (401)", "收到 Webhook 但 x-line-signature 驗證不合。"));
+    } catch {
+      await discord.sendError("小貓 Webhook 簽章驗證失敗 (401)", "收到 Webhook 但 x-line-signature 驗證不合。");
+    }
     return c.text("Invalid signature", 401);
   }
 
@@ -35,16 +41,24 @@ webhookRouter.post("/webhook", async (c) => {
 
   const events = payload.events || [];
 
+  const discord = new DiscordLogger(c.env.DISCORD_WEBHOOK_URL, c.env.ASSISTANT_KV);
+
   // 2. Dispatch events asynchronously with ctx.waitUntil
   for (const event of events) {
     const senderId = event.source?.userId;
+    const isAllowed = !c.env.ALLOWED_USER_ID || !senderId || senderId === c.env.ALLOWED_USER_ID;
+
+    try {
+      c.executionCtx.waitUntil(discord.sendWebhookEvent(event as unknown as Record<string, unknown>, isAllowed));
+    } catch {
+      await discord.sendWebhookEvent(event as unknown as Record<string, unknown>, isAllowed);
+    }
 
     // Single-user whitelist verification
-    if (c.env.ALLOWED_USER_ID && senderId && senderId !== c.env.ALLOWED_USER_ID) {
+    if (!isAllowed) {
       console.warn(`[Webhook] Blocked unauthorized sender ID: ${senderId}`);
       continue;
     }
-
     try {
       c.executionCtx.waitUntil(processLineEvent(event, c.env));
     } catch {
