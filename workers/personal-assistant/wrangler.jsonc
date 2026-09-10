@@ -12,8 +12,7 @@
   },
   "vars": {
     "ENVIRONMENT": "production",
-    "GOOGLE_SHEET_APP_URL": "https://script.google.com/macros/s/AKfycbz9x2LZfeGuzzITB0iNf1r6RX8pRk55BcG8wdZtv6-nfLZiCX5dw5sPZCzGOrO4bjTwaA/exec",
-    "DISCORD_WEBHOOK_URL": "https://discord.com/api/webhooks/1546312112454893620/IRxVsk3EMy1RV5VWrnbCOCLJ52i2JOPLQFLC0AwO6Tu9MfrIt6XZInhl4WZbpSL5os_-"
+    "GOOGLE_SHEET_APP_URL": "https://script.google.com/macros/s/AKfycbz9x2LZfeGuzzITB0iNf1r6RX8pRk55BcG8wdZtv6-nfLZiCX5dw5sPZCzGOrO4bjTwaA/exec"
   },
   "kv_namespaces": [
     {
@@ -24,7 +23,8 @@
   "triggers": {
     "crons": [
       "0 23 * * *",
-      "0 7 * * 1-5"
+      "0 7 * * 1-5",
+      "0 11 * * *"
     ]
   }
 }

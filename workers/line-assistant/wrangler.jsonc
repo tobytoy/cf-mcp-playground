@@ -13,8 +13,7 @@
   "vars": {
     "ENVIRONMENT": "production",
     "NEEDLE_API_URL": "http://127.0.0.1:8000/route",
-    "GOOGLE_SHEET_APP_URL": "https://script.google.com/macros/s/AKfycbwZ67mU02MCiPy0G-zA-ODggGl8w5KksCpDTiRthaCdQDXqZ1M8tJ6P7pkXQBbTdKrlog/exec",
-    "DISCORD_WEBHOOK_URL": "https://discord.com/api/webhooks/1546312112454893620/IRxVsk3EMy1RV5VWrnbCOCLJ52i2JOPLQFLC0AwO6Tu9MfrIt6XZInhl4WZbpSL5os_-"
+    "GOOGLE_SHEET_APP_URL": "https://script.google.com/macros/s/AKfycbwZ67mU02MCiPy0G-zA-ODggGl8w5KksCpDTiRthaCdQDXqZ1M8tJ6P7pkXQBbTdKrlog/exec"
   },
   "kv_namespaces": [
     {
@@ -22,12 +21,5 @@
       "id": "0b10c6bad629469fbab1307f98ad0349",
       "preview_id": "b9eed95d82e743e8a1a7fe3a8e1875b3"
     }
-  ],
-  "triggers": {
-    "crons": [
-      "0 23 * * *",
-      "0 7 * * 1-5",
-      "0 11 * * *"
-    ]
-  }
+  ]
 }

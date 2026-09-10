@@ -28,7 +28,8 @@ export async function generateAiResponse(
   apiKey: string,
   targetModel: GeminiModel | string = "gemini-3.5-flash-lite",
   history: ChatMessage[] = [],
-  style: "concise" | "detailed" | "warm" = "warm"
+  style: "concise" | "detailed" | "warm" = "warm",
+  customSystemPrompt?: string
 ): Promise<AiResponseResult> {
   if (!apiKey) {
     return { text: "尚未設定 GEMINI_API_KEY，請確認環境變數。", modelUsed: "none" };
@@ -44,7 +45,7 @@ export async function generateAiResponse(
 
   const twTime = getTaiwanTimeString();
 
-  let systemPrompt = `你是一個貼心、溫暖、高智慧的專屬私人生活助理【HelperDog 守護犬】。
+  let systemPrompt = customSystemPrompt || `你是一個貼心、溫暖、高智慧的專屬私人生活助理【HelperDog 守護犬】。
 【目前時間與背景】：
 • 目前標準時間：台灣時間 (UTC+8 / Asia/Taipei) — ${twTime}
 • 服務對象：主要使用者個人與家庭日常生活。
@@ -56,7 +57,7 @@ export async function generateAiResponse(
 3. 排版請多利用 🔷【大標題】、📌【重點】 與條列符號（•），分段適度留白，適合手機快速閱讀。
 4. 嚴禁在回覆中洩漏任何思考過程或內部草稿標記（如 Drafting、thinking 等），請直接給出溫暖體貼的最終答案。`;
 
-  if (style === "concise") {
+  if (!customSystemPrompt && style === "concise") {
     systemPrompt += "\n5. 請簡明扼要回覆核心重點，避免冗長。";
   }
 
@@ -77,7 +78,7 @@ export async function generateAiResponse(
       parts: [{ text: systemPrompt }]
     },
     generationConfig: {
-      temperature: 0.5,
+      temperature: customSystemPrompt ? 0.2 : 0.5,
       maxOutputTokens: 4096
     }
   };

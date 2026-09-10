@@ -677,7 +677,7 @@ export function createMorningBriefingFlexMessage(info: {
   dateStr: string;
   timeStr: string;
   weather: { condition: string; rainProb: string; tempRange: string; comfort: string; advice: string };
-  todoCount: number;
+  todos: PersonalTodoItem[];
   finance: {
     usStocks: Array<{ symbol: string; name: string; price: number; changePercent: number }>;
     crypto: Array<{ symbol: string; name: string; priceUsd: number; changePercent24h: number }>;
@@ -720,9 +720,41 @@ export function createMorningBriefingFlexMessage(info: {
     ]
   }));
 
+  const displayed = info.todos.slice(0, 5);
+  const remaining = info.todos.length - displayed.length;
+
+  const todoRows =
+    displayed.length > 0
+      ? displayed.map((t) => ({
+          type: "box",
+          layout: "horizontal",
+          margin: "xs",
+          contents: [
+            { type: "text", text: "•", size: "xs", color: "#059669", flex: 0 },
+            {
+              type: "text",
+              text: `[${t.category}] ${t.item}`,
+              size: "xs",
+              color: "#1E293B",
+              wrap: true,
+              flex: 1,
+              margin: "sm"
+            }
+          ]
+        }))
+      : [{ type: "text", text: "今日無進行中待辦 🎉", size: "xs", color: "#64748B", margin: "xs" }];
+
+  const todoSection = [
+    { type: "text", text: `📋 進行中待辦（${info.todos.length} 項）`, weight: "bold", size: "xs", color: "#059669", margin: "md" },
+    ...todoRows,
+    ...(remaining > 0
+      ? [{ type: "text", text: `還有 ${remaining} 項…`, size: "xxs", color: "#94A3B8", margin: "xs" }]
+      : [])
+  ];
+
   return {
     type: "flex",
-    altText: `🌅 【007 晨間生活與美股早報】${info.dateStr} 07:00 天氣、待辦與美股走勢`,
+    altText: `🌅 【007 晨間生活早報】${info.dateStr} 07:00 天氣、${info.todos.length} 項待辦、美股走勢`,
     contents: {
       type: "bubble",
       size: "giga",
@@ -732,7 +764,7 @@ export function createMorningBriefingFlexMessage(info: {
         backgroundColor: "#0284C7",
         paddingAll: "lg",
         contents: [
-          { type: "text", text: "🌅 007 晨間生活與美股早報", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: "🌅 007 晨間生活早報", color: "#FFFFFF", weight: "bold", size: "md" },
           { type: "text", text: ` 台灣時間 ${info.dateStr} ${info.timeStr}`, color: "#E0F2FE", size: "xs", margin: "xs" }
         ]
       },
@@ -741,38 +773,38 @@ export function createMorningBriefingFlexMessage(info: {
         layout: "vertical",
         paddingAll: "lg",
         contents: [
+          // 天氣列
           {
             type: "box",
             layout: "horizontal",
+            backgroundColor: "#F0F9FF",
+            cornerRadius: "md",
+            paddingAll: "md",
             contents: [
               {
                 type: "box",
                 layout: "vertical",
                 flex: 3,
                 contents: [
-                  { type: "text", text: "⛅ 今日天氣", size: "xs", color: "#0284C7", weight: "bold" },
+                  { type: "text", text: "⛅ 今日天氣（台北）", size: "xs", color: "#0284C7", weight: "bold" },
                   { type: "text", text: `${info.weather.condition} ｜ ${info.weather.tempRange}`, size: "xs", color: "#0F172A", margin: "xs" },
-                  { type: "text", text: `降雨率 ☔ ${info.weather.rainProb}`, size: "xs", color: parseInt(info.weather.rainProb) >= 30 ? "#DC2626" : "#059669" }
-                ]
-              },
-              {
-                type: "box",
-                layout: "vertical",
-                flex: 2,
-                contents: [
-                  { type: "text", text: "📋 生活待辦", size: "xs", color: "#059669", weight: "bold" },
-                  { type: "text", text: `${info.todoCount} 項進行中`, size: "sm", weight: "bold", color: "#10B981", margin: "xs" },
-                  { type: "text", text: "Google Sheet 同步", size: "xxs", color: "#64748B" }
+                  { type: "text", text: `降雨率 ☔ ${info.weather.rainProb}`, size: "xs", color: parseInt(info.weather.rainProb) >= 30 ? "#DC2626" : "#059669" },
+                  { type: "text", text: info.weather.advice, size: "xxs", color: "#64748B", margin: "xs", wrap: true }
                 ]
               }
             ]
           },
+          // 待辦明細
+          { type: "separator", margin: "md" },
+          ...todoSection,
+          // 美股與加密
           { type: "separator", margin: "md" },
           { type: "text", text: "📈 隔夜美股與加密走勢", weight: "bold", size: "xs", color: "#0284C7", margin: "md" },
           ...usStockRows,
           ...cryptoRows,
+          // 生活要聞
           { type: "separator", margin: "md" },
-          { type: "text", text: "📰 今日重點要聞", weight: "bold", size: "xs", color: "#0284C7", margin: "md" },
+          { type: "text", text: "📰 今日生活要聞", weight: "bold", size: "xs", color: "#0284C7", margin: "md" },
           { type: "text", text: info.newsSummary, wrap: true, size: "xs", color: "#334155", margin: "sm" }
         ]
       }
@@ -836,6 +868,71 @@ export function createStockBriefingFlexMessage(info: {
           { type: "separator", margin: "md" },
           { type: "text", text: "💡 法人動向與盤後總結：", weight: "bold", size: "xs", color: "#DC2626", margin: "md" },
           { type: "text", text: info.summary, wrap: true, size: "xs", color: "#334155", margin: "sm" }
+        ]
+      }
+    },
+    quickReply: DEFAULT_QUICK_REPLY
+  };
+}
+
+export function createGithubBriefingFlexMessage(info: {
+  dateStr: string;
+  timeStr: string;
+  repos: Array<{ name: string; url: string; description: string; language: string; stars: number }>;
+}): OutgoingLineMessage {
+  const repoBoxes = info.repos.map((r, i) => ({
+    type: "box",
+    layout: "vertical",
+    margin: "md",
+    backgroundColor: "#F8FAFC",
+    cornerRadius: "md",
+    paddingAll: "md",
+    action: {
+      type: "uri",
+      label: r.name,
+      uri: r.url
+    },
+    contents: [
+      {
+        type: "box",
+        layout: "horizontal",
+        contents: [
+          { type: "text", text: `${i + 1}. ${r.name}`, weight: "bold", size: "xs", color: "#0969DA", flex: 4, wrap: true },
+          { type: "text", text: `⭐ ${r.stars.toLocaleString()}`, weight: "bold", size: "xs", color: "#F59E0B", align: "end", flex: 2 }
+        ]
+      },
+      { type: "text", text: r.description, size: "xxs", color: "#475569", wrap: true, margin: "xs" },
+      {
+        type: "box",
+        layout: "horizontal",
+        margin: "xs",
+        contents: [{ type: "text", text: `語言: ${r.language}`, size: "xxs", color: "#64748B" }]
+      }
+    ]
+  }));
+
+  return {
+    type: "flex",
+    altText: `🚀 【GitHub 今日熱點黑馬】${info.dateStr} 19:00 增長最快的開源新星`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#1F2937",
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "🚀 GitHub 今日熱門開源黑馬", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: `📅 台灣時間 ${info.dateStr} ${info.timeStr} (點擊可開啟倉庫)`, color: "#E5E7EB", size: "xs", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "lg",
+        contents: [
+          { type: "text", text: "🔥 今日 Star 增長最快的開源新專案：", weight: "bold", size: "xs", color: "#64748B" },
+          ...repoBoxes
         ]
       }
     },

@@ -4,6 +4,7 @@ import { fetchTaiwanStockSnapshot } from "../tools/financeData";
 import { executeTavilySearch } from "../tools/search";
 import { createStockBriefingFlexMessage } from "../line/templates";
 import { getTaiwanDateOnly, getTaiwanShortTime } from "../utils/time";
+import { DiscordLogger } from "../tools/discordLogger";
 
 export async function executeStockBriefing(env: Env, customUserId?: string): Promise<boolean> {
   const userId = customUserId || env.ALLOWED_USER_ID?.split(",")[0]?.trim();
@@ -13,16 +14,39 @@ export async function executeStockBriefing(env: Env, customUserId?: string): Pro
   }
 
   const lineClient = new LineClient(env.LINE_CHANNEL_ACCESS_TOKEN);
+  const discord = new DiscordLogger(env.DISCORD_WEBHOOK_URL, env.PERSONAL_KV);
   const dateStr = getTaiwanDateOnly();
   const timeStr = getTaiwanShortTime();
 
   console.log(`[StockBriefing] Starting Taiwan stock closing briefing generation at ${dateStr} ${timeStr}...`);
 
+  await discord.sendInfo(
+    `📈 台股收盤快報開始執行 ${dateStr} ${timeStr}`,
+    "正在抓取台股報價與法人動向...",
+    [],
+    true
+  );
+
   try {
     const [quotes, marketAnalysis] = await Promise.all([
       fetchTaiwanStockSnapshot(),
-      executeTavilySearch("今日台股收盤 三大法人外資買賣超 台積電 聯發科 行情總結", env.TAVILY_API_KEY, env.GEMINI_API_KEY)
+      executeTavilySearch(
+        "今日台股收盤 三大法人外資買賣超 台積電 聯發科 行情總結",
+        env.TAVILY_API_KEY,
+        env.GEMINI_API_KEY,
+        "以下是今日台股盤後資訊，請用繁體中文整理成 5～7 條重點，每條用「• 」開頭，約 25～40 字，涵蓋大盤漲跌、法人動向、主力族群，不要加開場白或標題："
+      )
     ]);
+
+    await discord.sendInfo(
+      "📦 台股資料抓取完成",
+      [
+        `**報價**：${quotes.map((q) => `${q.name} ${q.changePercent >= 0 ? "▲+" : "▼"}${q.changePercent.toFixed(2)}%`).join("　")}`,
+        `**法人摘要**（前 80 字）：${marketAnalysis.summary.slice(0, 80)}…`
+      ].join("\n"),
+      [],
+      true
+    );
 
     const flexMessage = createStockBriefingFlexMessage({
       dateStr,
@@ -33,9 +57,18 @@ export async function executeStockBriefing(env: Env, customUserId?: string): Pro
 
     const success = await lineClient.push(userId, flexMessage);
     console.log(`[StockBriefing] Push result to ${userId}: ${success ? "SUCCESS" : "FAILED"}`);
+
+    await discord.sendInfo(
+      success ? "✅ 台股快報推送成功" : "❌ 台股快報推送失敗",
+      `LINE push → \`${userId}\`　結果：${success ? "SUCCESS" : "FAILED"}`,
+      [],
+      true
+    );
+
     return success;
   } catch (error) {
     console.error("[StockBriefing] Execution failed:", error);
+    await discord.sendError("台股快報執行失敗", error instanceof Error ? error : String(error));
     await lineClient.push(userId, {
       type: "text",
       text: `📈 台股盤後總結推播異常：${error instanceof Error ? error.message : String(error)}`

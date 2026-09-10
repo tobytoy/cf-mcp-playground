@@ -7,6 +7,7 @@ import { transcribeAudio } from "../tools/voiceTranscribe";
 import { DiscordLogger } from "../tools/discordLogger";
 import { executeMorningBriefing } from "../cron/morningBriefing";
 import { executeStockBriefing } from "../cron/stockBriefing";
+import { executeGithubBriefing } from "../cron/githubBriefing";
 
 export const webhookRouter = new Hono<{ Bindings: Env }>();
 
@@ -57,6 +58,8 @@ webhookRouter.get("/cron/trigger", async (c) => {
 
   if (type === "morning") {
     success = await executeMorningBriefing(c.env);
+  } else if (type === "github") {
+    success = await executeGithubBriefing(c.env);
   } else {
     success = await executeStockBriefing(c.env);
   }
