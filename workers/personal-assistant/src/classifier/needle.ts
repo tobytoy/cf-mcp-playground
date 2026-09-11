@@ -25,7 +25,7 @@ export class NeedleClassifier {
 
 
     // 1. Feature List / Help -> list_features
-    if (/(功能|你會做什麼|你能做什麼|help|指令|服務項目|支援什麼|清單|目錄|說明)/i.test(trimmed)) {
+    if (!/(待辦|代辦)/.test(trimmed) && /(功能|你會做什麼|你能做什麼|help|指令|服務項目|支援什麼|^清單$|功能清單|目錄|說明)/i.test(trimmed)) {
       return {
         tool: "list_features",
         arguments: {},
@@ -68,7 +68,24 @@ export class NeedleClassifier {
         reasoning: "Heuristic: Detected todo list request"
       };
     }
+    // 4b. Complete Todo (supports "完成 1", "完成待辦 1", "完成：買鮮奶", "做完 2", "搞定 1", "done 1", "check 1")
+    const todoCompleteMatch = trimmed.match(
+      /^(?:(?:幫我|請幫我)?(?:標記|設為)?(?:已完成|完成|做完|搞定|done|check)(?:待辦|代辦|事項)?|(?:完成|做完|搞定|done|check))[:：\s]*(.+)$/i
+    );
+    if (todoCompleteMatch) {
+      const itemIdentifier = todoCompleteMatch[1].trim();
+      return {
+        tool: "manage_todo",
+        arguments: {
+          action: "complete",
+          item: itemIdentifier
+        },
+        confidence: 0.98,
+        reasoning: "Heuristic: Detected natural language todo complete request"
+      };
+    }
 
+    // 4c. Add Todo (supports "新增待辦 ...", "待辦：...", "提醒我 ...")
     const todoAddMatch = trimmed.match(/^(?:(?:幫我|請幫我)?(?:新增|記一下|記|記錄)?(?:待辦|代辦|todo)|(?:幫我|請幫我)?提醒我)[:：\s]*(.+)$/i);
     if (todoAddMatch) {
       const itemText = todoAddMatch[1].trim();

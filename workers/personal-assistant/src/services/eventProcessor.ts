@@ -266,13 +266,22 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
         case "manage_todo": {
           const action = (routing.arguments.action as string) || "list";
           const itemText = (routing.arguments.item as string) || "";
+          let feedbackNotice: string | undefined;
 
           if (action === "add" && itemText) {
-            await todoManager.addTodo(userId, itemText, "生活");
+            const added = await todoManager.addTodo(userId, itemText, "生活");
+            feedbackNotice = `✅ 已成功新增待辦：「[${added.category}] ${added.item}」`;
+          } else if (action === "complete" && itemText) {
+            const completed = await todoManager.completeTodo(userId, itemText);
+            if (completed) {
+              feedbackNotice = `✅ 已將待辦「[${completed.category}] ${completed.item}」標記為已完成！`;
+            } else {
+              feedbackNotice = `⚠️ 找不到符合「${itemText}」的進行中待辦項目。`;
+            }
           }
 
           const currentTodos = await todoManager.getTodos(userId);
-          await lineClient.replyOrPush(replyToken, userId, createTodoFlexMessage(currentTodos));
+          await lineClient.replyOrPush(replyToken, userId, createTodoFlexMessage(currentTodos, feedbackNotice));
           break;
         }
 

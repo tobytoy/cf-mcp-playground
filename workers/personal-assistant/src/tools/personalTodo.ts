@@ -69,12 +69,34 @@ export class PersonalTodoManager {
     return newTodo;
   }
 
-  async completeTodo(userId: string, todoId: string): Promise<boolean> {
+  async completeTodo(userId: string, identifier: string): Promise<PersonalTodoItem | null> {
     const todos = await this.getTodos(userId);
-    const target = todos.find((t) => t.id === todoId);
-    if (!target) return false;
+    const clean = identifier.trim();
+    const activeTodos = todos.filter((t) => t.status === "進行中");
+
+    let target: PersonalTodoItem | undefined;
+
+    // 1. 依進行中待辦的序號匹配 (如 "1", "2")
+    const num = parseInt(clean, 10);
+    if (!isNaN(num) && String(num) === clean && num >= 1 && num <= activeTodos.length) {
+      target = activeTodos[num - 1];
+    } else {
+      // 2. 依 ID 匹配 (如 "TODO-007", "007", "7")
+      target = activeTodos.find(
+        (t) =>
+          t.id.toLowerCase() === clean.toLowerCase() ||
+          t.id.toLowerCase() === `todo-${clean.padStart(3, "0")}`.toLowerCase()
+      );
+      // 3. 依待辦內容關鍵字模糊匹配 (如 "健保", "鮮奶")
+      if (!target) {
+        target = activeTodos.find((t) => t.item.toLowerCase().includes(clean.toLowerCase()));
+      }
+    }
+
+    if (!target) return null;
 
     target.status = "已完成";
+    target.completedAt = getTaiwanTimeString();
     memoryTodos.set(userId, todos);
 
     if (this.kv) {
@@ -87,14 +109,14 @@ export class PersonalTodoManager {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: AbortSignal.timeout(8000),
-          body: JSON.stringify({ action: "todo_complete", id: todoId })
+          body: JSON.stringify({ action: "todo_complete", id: target.id })
         });
       } catch (err) {
         console.warn("[PersonalTodo] Google Sheet complete sync failed:", err);
       }
     }
 
-    return true;
+    return target;
   }
 
   async getTodos(userId: string): Promise<PersonalTodoItem[]> {

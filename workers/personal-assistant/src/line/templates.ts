@@ -344,45 +344,107 @@ export function createOcrVaultFlexMessage(result: OcrResult): OutgoingLineMessag
 /**
  * Flex Message for Personal Todos List.
  */
-export function createTodoFlexMessage(todos: PersonalTodoItem[]): OutgoingLineMessage {
+export function createTodoFlexMessage(
+  todos: PersonalTodoItem[],
+  feedbackNotice?: string
+): OutgoingLineMessage {
   const activeTodos = todos.filter((t) => t.status === "進行中");
-  const completedTodos = todos.filter((t) => t.status === "已完成");
+  const completedCount = todos.filter((t) => t.status === "已完成").length;
 
-  const rows = todos.slice(0, 6).map((t) => ({
+  const rows = activeTodos.slice(0, 8).map((t, idx) => ({
     type: "box",
     layout: "horizontal",
-    margin: "sm",
+    margin: "md",
+    alignItems: "center",
     contents: [
       {
         type: "text",
-        text: t.status === "已完成" ? "✅" : "⏳",
-        size: "xs",
+        text: `${idx + 1}.`,
+        weight: "bold",
+        size: "sm",
+        color: "#4F46E5",
         flex: 1
       },
       {
-        type: "text",
-        text: `[${t.category}] ${t.item}`,
-        size: "xs",
-        color: t.status === "已完成" ? "#94A3B8" : "#1E293B",
-        wrap: true,
-        flex: 7
+        type: "box",
+        layout: "vertical",
+        flex: 6,
+        contents: [
+          {
+            type: "text",
+            text: `[${t.category}] ${t.item}`,
+            size: "sm",
+            color: "#1E293B",
+            weight: "bold",
+            wrap: true
+          },
+          {
+            type: "text",
+            text: `編號: ${t.id} ｜ 建立於 ${t.createdAt ? t.createdAt.slice(5, 16) : "近期"}`,
+            size: "xxs",
+            color: "#64748B",
+            margin: "xs"
+          }
+        ]
+      },
+      {
+        type: "button",
+        style: "secondary",
+        height: "sm",
+        color: "#E0E7FF",
+        flex: 2,
+        action: {
+          type: "message",
+          label: "完成",
+          text: `完成 ${idx + 1}`
+        }
       }
     ]
   }));
+
+  const noticeBox = feedbackNotice
+    ? [
+        {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: feedbackNotice.startsWith("✅") ? "#ECFDF5" : "#FEF3C7",
+          cornerRadius: "md",
+          paddingAll: "sm",
+          margin: "sm",
+          contents: [
+            {
+              type: "text",
+              text: feedbackNotice,
+              size: "xs",
+              color: feedbackNotice.startsWith("✅") ? "#065F46" : "#92400E",
+              wrap: true
+            }
+          ]
+        },
+        { type: "separator", margin: "md" }
+      ]
+    : [];
 
   return {
     type: "flex",
     altText: `📝 【生活待辦事項】目前共 ${activeTodos.length} 項進行中`,
     contents: {
       type: "bubble",
+      size: "giga",
       header: {
         type: "box",
         layout: "vertical",
         backgroundColor: "#4F46E5",
         paddingAll: "lg",
         contents: [
-          { type: "text", text: "📝 個人生活待辦清單", color: "#FFFFFF", weight: "bold", size: "md" },
-          { type: "text", text: `進行中：${activeTodos.length} 項 • 已完成：${completedTodos.length} 項 (與 Google Sheet 同步)`, color: "#E0E7FF", size: "xs", margin: "xs" }
+          { type: "text", text: "📝 個人生活待辦清單（進行中）", color: "#FFFFFF", weight: "bold", size: "md" },
+          {
+            type: "text",
+            text: `⏳ 處理中：${activeTodos.length} 項 • ✅ 已完成：${completedCount} 項 (已自動隱藏)`,
+            color: "#E0E7FF",
+            size: "xs",
+            margin: "xs"
+          }
         ]
       },
       body: {
@@ -390,30 +452,100 @@ export function createTodoFlexMessage(todos: PersonalTodoItem[]): OutgoingLineMe
         layout: "vertical",
         paddingAll: "lg",
         contents: [
+          ...noticeBox,
           ...rows,
-          ...(todos.length === 0 ? [{ type: "text", text: "目前沒有任何待辦事項，輸入「待辦：...」即可新增！", size: "xs", color: "#64748B" }] : [])
+          ...(activeTodos.length === 0
+            ? [
+                {
+                  type: "text",
+                  text: "🎉 目前沒有任何進行中的待辦事項！太棒了！",
+                  size: "sm",
+                  weight: "bold",
+                  color: "#059669",
+                  margin: "md"
+                },
+                {
+                  type: "text",
+                  text: "💡 提示：輸入「新增待辦 買鮮奶」或「提醒我 明天繳水費」即可新增待辦。",
+                  size: "xs",
+                  color: "#64748B",
+                  margin: "sm",
+                  wrap: true
+                }
+              ]
+            : [
+                { type: "separator", margin: "lg" },
+                {
+                  type: "text",
+                  text: "💡 點擊右側「完成」按鈕，或直接對話回覆「完成 1」即可標記完成。",
+                  size: "xxs",
+                  color: "#64748B",
+                  margin: "md",
+                  wrap: true
+                }
+              ])
         ]
       },
       footer: {
         type: "box",
         layout: "horizontal",
         paddingAll: "md",
+        spacing: "sm",
         contents: [
           {
             type: "button",
             style: "primary",
             color: "#4F46E5",
             height: "sm",
+            flex: 1,
+            action: {
+              type: "message",
+              label: "➕ 新增待辦",
+              text: "待辦："
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            flex: 1,
             action: {
               type: "uri",
-              label: "📱 開啟 Mini App 完整管理",
+              label: "📱 開啟 Mini App",
               uri: "https://miniapp.line.me/2011472036-bVXeg5I6"
             }
           }
         ]
       }
     },
-    quickReply: DEFAULT_QUICK_REPLY
+    quickReply: {
+      items: [
+        {
+          type: "action",
+          action: {
+            type: "message",
+            label: "📋 待辦清單",
+            text: "查看待辦"
+          }
+        },
+        {
+          type: "action",
+          action: {
+            type: "message",
+            label: "➕ 新增待辦",
+            text: "待辦："
+          }
+        },
+        {
+          type: "action",
+          action: {
+            type: "message",
+            label: "🐶 快捷選單",
+            text: "選單"
+          }
+        }
+      ]
+    }
   };
 }
 

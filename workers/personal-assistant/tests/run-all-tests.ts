@@ -64,7 +64,20 @@ async function main() {
   console.log(`  ✔ '你能做什麼' -> ${r2.tool}`);
 
   const r3 = classifier.classify("待辦：下午兩點採買生鮮");
-  if (r3.tool !== "manage_todo") throw new Error(`Expected manage_todo, got ${r3.tool}`);
+  if (r3.tool !== "manage_todo" || r3.arguments.action !== "add") throw new Error(`Expected manage_todo add, got ${r3.tool}`);
+  console.log(`  ✔ '待辦：下午兩點採買生鮮' -> ${r3.tool} (${r3.arguments.action})`);
+
+  const rTodoComplete = classifier.classify("完成 1");
+  if (rTodoComplete.tool !== "manage_todo" || rTodoComplete.arguments.action !== "complete" || rTodoComplete.arguments.item !== "1") {
+    throw new Error(`Expected manage_todo complete, got ${rTodoComplete.tool} / ${rTodoComplete.arguments.action}`);
+  }
+  console.log(`  ✔ '完成 1' -> ${rTodoComplete.tool} (${rTodoComplete.arguments.action} #${rTodoComplete.arguments.item})`);
+
+  const rTodoList = classifier.classify("待辦清單");
+  if (rTodoList.tool !== "manage_todo" || rTodoList.arguments.action !== "list") {
+    throw new Error(`Expected manage_todo list, got ${rTodoList.tool}`);
+  }
+  console.log(`  ✔ '待辦清單' -> ${rTodoList.tool} (${rTodoList.arguments.action})`);
   const r5 = classifier.classify("幫我找附近的 YouBike");
   if (r5.tool !== "nearby_transport") throw new Error(`Expected nearby_transport, got ${r5.tool}`);
   console.log(`  ✔ '幫我找附近的 YouBike' -> ${r5.tool}`);
