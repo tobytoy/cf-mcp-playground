@@ -1,5 +1,8 @@
 import fs from "fs";
 import path from "path";
+import dns from "node:dns";
+
+dns.setDefaultResultOrder("ipv4first");
 
 const TOKEN = "2QrQh6Mx5FvaQOzIhBsJB3wGZaNkhQUMskf5OKY/hOwXnEJtDPkXi4RbWjIlcGHIBHVHltnXayV1ym7Yb1OCORqtj+k2r4O5GPDmXwFYKhBzPOpx0xt7INqmASNf/pZHNJBu7cGczgQUsAYEXQlXWAdB04t89/1O/w1cDnyilFU=";
 const USER_ID = "Uba361995b7ae8345b4a23e195253d27c";
@@ -32,7 +35,7 @@ async function main() {
       },
       {
         bounds: { x: 0, y: 843, width: 833, height: 843 },
-        action: { type: "message", text: "拍照單據功能" }
+        action: { type: "message", text: "精選專案" }
       },
       {
         bounds: { x: 833, y: 843, width: 834, height: 843 },

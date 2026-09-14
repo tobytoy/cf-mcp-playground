@@ -36,11 +36,11 @@ def generate_menu():
             "bg": "#0C4A6E"
         },
         {
-            "tag": "OCR / DRIVE",
-            "title": "拍照記帳",
-            "sub": "單據文字 • 存 Drive 庫",
-            "accent": "#D97706",
-            "bg": "#451A03"
+            "tag": "FEATURED APPS",
+            "title": "精選專案",
+            "sub": "Luna AI • 公告 • 聊天室",
+            "accent": "#6366F1",
+            "bg": "#1E1B4B"
         },
         {
             "tag": "MINI APP",

@@ -6,7 +6,7 @@ import { DiscordLogger } from "../src/tools/discordLogger";
 import { getEnabledModules, createFeatureListFlexMessage } from "../src/config/modules";
 import { getNearbyTransportContext } from "../src/tools/tdxTransport";
 import { getTaiwanWeatherForecast } from "../src/tools/weather";
-import { createLocationTransportFlexMessage } from "../src/line/templates";
+import { createLocationTransportFlexMessage, createPromoProjectsFlexMessage } from "../src/line/templates";
 import { fetchMorningFinanceSnapshot, fetchTaiwanStockSnapshot } from "../src/tools/financeData";
 import { app } from "../src/index";
 import type { Env } from "../src/types/env";
@@ -54,9 +54,21 @@ async function main() {
   if (r0.tool !== "dashboard") throw new Error(`Expected dashboard, got ${r0.tool}`);
   console.log(`  ✔ '選單' -> ${r0.tool}`);
 
-  const rOcr = classifier.classify("拍照單據功能");
+  const rPromo = classifier.classify("精選專案");
+  if (rPromo.tool !== "promo_projects") throw new Error(`Expected promo_projects, got ${rPromo.tool}`);
+  console.log(`  ✔ '精選專案' -> ${rPromo.tool}`);
+
+  const rOldButton = classifier.classify("拍照單據功能");
+  if (rOldButton.tool !== "promo_projects") throw new Error(`Expected promo_projects, got ${rOldButton.tool}`);
+  console.log(`  ✔ '拍照單據功能' -> ${rOldButton.tool} (自動相容精選專案)`);
+
+  const rOcr = classifier.classify("發票功能");
   if (rOcr.tool !== "ocr_vault") throw new Error(`Expected ocr_vault, got ${rOcr.tool}`);
-  console.log(`  ✔ '拍照單據功能' -> ${rOcr.tool}`);
+  console.log(`  ✔ '發票功能' -> ${rOcr.tool}`);
+
+  const promoFlex = createPromoProjectsFlexMessage();
+  if (promoFlex.type !== "flex") throw new Error("Promo flex message malformed");
+  console.log(`  ✔ Promo Projects Flex Message Bubble generated successfully!`);
 
   const r1 = classifier.classify("功能");
   const r2 = classifier.classify("你能做什麼");

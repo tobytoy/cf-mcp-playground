@@ -170,14 +170,14 @@ export function createDashboardFlexMessage(): OutgoingLineMessage {
               {
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#ECFDF5",
+                backgroundColor: "#EEF2FF",
                 paddingAll: "md",
                 cornerRadius: "10px",
                 flex: 1,
-                action: { type: "message", text: "📸 拍照單據功能" },
+                action: { type: "message", text: "精選專案" },
                 contents: [
-                  { type: "text", text: "📸 拍照 OCR", weight: "bold", size: "sm", color: "#065F46" },
-                  { type: "text", text: "直接傳照片存 Drive", size: "xxs", color: "#059669", margin: "xs" }
+                  { type: "text", text: "🚀 精選專案", weight: "bold", size: "sm", color: "#4338CA" },
+                  { type: "text", text: "Luna AI • 公告 • 聊天室", size: "xxs", color: "#6366F1", margin: "xs" }
                 ]
               },
               {
@@ -222,6 +222,172 @@ export function createDashboardFlexMessage(): OutgoingLineMessage {
               type: "message",
               label: "📋 完整功能清單",
               text: "功能"
+            }
+          }
+        ]
+      }
+    },
+    quickReply: DEFAULT_QUICK_REPLY
+  };
+}
+
+/**
+ * Flex Message Bubble for Promoting Ecosystem Projects (Luna AI Hub, Public Announcement, Collaborative Chatroom).
+ */
+export function createPromoProjectsFlexMessage(): OutgoingLineMessage {
+  return {
+    type: "flex",
+    altText: "🚀 【精選推薦專案】Luna AI Hub、官方公告中心、聯手聊天室",
+    contents: {
+      type: "bubble",
+      size: "giga",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#4F46E5",
+        paddingAll: "lg",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🚀 精選推薦生態系專案", weight: "bold", size: "md", color: "#FFFFFF", flex: 4 },
+              { type: "text", text: "線上體驗", size: "xs", color: "#C7D2FE", align: "end", flex: 2 }
+            ]
+          },
+          {
+            type: "text",
+            text: "為您精選三項熱門 AI、官方公告與協同通訊服務，點擊按鈕即可立即開啟體驗！",
+            size: "xxs",
+            color: "#E0E7FF",
+            margin: "xs",
+            wrap: true
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "lg",
+        spacing: "md",
+        contents: [
+          // Project 1: Luna AI Hub
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#F8FAFC",
+            paddingAll: "md",
+            cornerRadius: "8px",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "🤖 Luna AI Hub", weight: "bold", size: "sm", color: "#1E293B", flex: 3 },
+                  { type: "text", text: "40+ 微服務", size: "xxs", color: "#4F46E5", align: "end", flex: 2, weight: "bold" }
+                ]
+              },
+              {
+                type: "text",
+                text: "企業級 AI 整合平台與智能微服務生態系，聚合 40+ 智能應用，支援 WebGPU 邊緣加速與超低延遲運算，支援 PWA 隨開即用。",
+                size: "xxs",
+                color: "#475569",
+                wrap: true,
+                margin: "xs"
+              }
+            ]
+          },
+          // Project 2: Public Announcement
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#F8FAFC",
+            paddingAll: "md",
+            cornerRadius: "8px",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "📢 官方公告中心", weight: "bold", size: "sm", color: "#1E293B", flex: 3 },
+                  { type: "text", text: "即時通訊", size: "xxs", color: "#0284C7", align: "end", flex: 2, weight: "bold" }
+                ]
+              },
+              {
+                type: "text",
+                text: "Public Announcement 官方公告發布中心，提供機密與公開官方最新政策、通訊動態與即時事項通知。",
+                size: "xxs",
+                color: "#475569",
+                wrap: true,
+                margin: "xs"
+              }
+            ]
+          },
+          // Project 3: Collaborative Chatroom
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#F8FAFC",
+            paddingAll: "md",
+            cornerRadius: "8px",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "💬 聯手聊天室", weight: "bold", size: "sm", color: "#1E293B", flex: 3 },
+                  { type: "text", text: "多人在線", size: "xxs", color: "#059669", align: "end", flex: 2, weight: "bold" }
+                ]
+              },
+              {
+                type: "text",
+                text: "Collaborative Multi-session Chatroom 多人協同多會話聊天室，支援跨房間即時交流、協作與流暢互動體驗。",
+                size: "xxs",
+                color: "#475569",
+                wrap: true,
+                margin: "xs"
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "md",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#4F46E5",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "🤖 前往 Luna AI Hub",
+              uri: "https://luna-ai-b7862.web.app/"
+            }
+          },
+          {
+            type: "button",
+            style: "primary",
+            color: "#0284C7",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "📢 開啟 官方公告中心",
+              uri: "https://toydogcat.github.io/public-announcement/"
+            }
+          },
+          {
+            type: "button",
+            style: "primary",
+            color: "#059669",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "💬 進入 聯手聊天室",
+              uri: "https://toydogcat.github.io/collaborative-chatroom"
             }
           }
         ]

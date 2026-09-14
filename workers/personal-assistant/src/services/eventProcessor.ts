@@ -3,6 +3,7 @@ import type { LineEvent } from "../types/line";
 import { LineClient } from "../line/client";
 import {
   createDashboardFlexMessage,
+  createPromoProjectsFlexMessage,
   createOcrVaultFlexMessage,
   createTodoFlexMessage,
   createCalculatorFlexMessage,
@@ -223,6 +224,12 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
         // List Supported Features
         case "list_features": {
           await lineClient.replyOrPush(replyToken, userId, createFeatureListFlexMessage("personal"));
+          break;
+        }
+
+        // Promo Projects Inquiry (3 Featured Services)
+        case "promo_projects": {
+          await lineClient.replyOrPush(replyToken, userId, createPromoProjectsFlexMessage());
           break;
         }
 

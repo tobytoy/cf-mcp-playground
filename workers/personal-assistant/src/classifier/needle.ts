@@ -13,8 +13,18 @@ export class NeedleClassifier {
         reasoning: "Heuristic: Detected interactive dashboard menu request"
       };
     }
-    // 1. OCR Inquiry -> ocr_vault
-    if (/(拍照單據|拍照功能|照片辨識|ocr|發票功能|收據功能)/i.test(trimmed)) {
+    // 1. Promo Projects / Recommendations -> promo_projects
+    if (/(精選專案|推薦專案|專案推薦|宣傳|精選服務|作品推薦|熱門專案|拍照單據|拍照記帳)/i.test(trimmed)) {
+      return {
+        tool: "promo_projects",
+        arguments: {},
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected promo projects inquiry"
+      };
+    }
+
+    // 1b. OCR Inquiry -> ocr_vault
+    if (/(照片辨識|ocr|發票功能|收據功能)/i.test(trimmed)) {
       return {
         tool: "ocr_vault",
         arguments: {},
