@@ -18,6 +18,7 @@ export interface Env {
   TAVILY_API_KEY?: string;
   CWA_API_KEY?: string;
   OPENAI_API_KEY?: string;
+  CRON_SECRET?: string;
 }
 export type GeminiModel =
   | "gemini-3.8-flash"

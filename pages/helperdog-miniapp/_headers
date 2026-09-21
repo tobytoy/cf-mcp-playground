@@ -1,6 +1,5 @@
 /*
-  Access-Control-Allow-Origin: *
-  Access-Control-Allow-Methods: GET, POST, OPTIONS
-  Access-Control-Allow-Headers: Content-Type, Authorization
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy: frame-ancestors 'self' https://liff.line.me https://*.line.me https://*.line-apps.com;
+  Permissions-Policy: microphone=(self), camera=(self), geolocation=(self)

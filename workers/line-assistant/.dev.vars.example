@@ -1,16 +1,21 @@
 # LINE Messaging API Credentials
 LINE_CHANNEL_SECRET=your_line_channel_secret_here
 LINE_CHANNEL_ACCESS_TOKEN=your_line_channel_access_token_here
-ALLOWED_USER_ID=Uaecf740fc05ef668b671fa90da9c832e
+# Supports single ID or comma-separated list of IDs: U123...,U456...
+ALLOWED_USER_ID=your_line_user_id_here
 
 # AI & Search API Keys
 GEMINI_API_KEY=your_gemini_api_key_here
 CWA_API_KEY=your_cwa_api_key_here
 TAVILY_API_KEY=your_tavily_api_key_here
 
-# Needle Classifier Configuration
-NEEDLE_API_URL=http://127.0.0.1:8000/route
+# Needle Classifier Configuration (optional, defaults to local heuristics)
+NEEDLE_API_URL=
 NEEDLE_API_KEY=
 
 # Discord Logging
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+
+# Security & Admin Authentication
+# Required for manual /cron/trigger, /debug, and /debug/errors (pass via ?key=<CRON_SECRET>)
+CRON_SECRET=your_random_secret_token_here

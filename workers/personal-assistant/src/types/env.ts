@@ -14,6 +14,7 @@ export interface Env {
   GEMINI_API_KEY: string;
   TAVILY_API_KEY?: string;
   CWA_API_KEY?: string;
+  CRON_SECRET?: string;
 }
 
 export type GeminiModel =

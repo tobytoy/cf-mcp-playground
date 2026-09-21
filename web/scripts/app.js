@@ -28,6 +28,18 @@ import {
 } from "./location.js";
 import { initMapModal } from "./map-modal.js";
 
+// HTML Sanitizer to prevent XSS injection
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str).replace(/[&<>'"]/g, (tag) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;"
+  }[tag] || tag));
+}
+
 // App State
 let state = {
   identity: getStoredIdentity(),
@@ -168,7 +180,7 @@ function renderContextData(data) {
     const level = data.situation?.level || "normal";
     bannerEl.className = `situation-banner ${level}`;
     const levelIcon = level === "alert" ? "🚨" : level === "warning" ? "⚠️" : "✨";
-    headlineEl.innerHTML = `${levelIcon} ${data.situation?.headline || "路況順暢"}`;
+    headlineEl.innerHTML = `${levelIcon} ${escapeHtml(data.situation?.headline || "路況順暢")}`;
     summaryEl.textContent = data.situation?.summary || "周邊無重大交通事件。";
   }
 
@@ -185,10 +197,10 @@ function renderContextData(data) {
         item.className = "card-item";
         item.innerHTML = `
           <div class="card-title">
-            <span>${r.title}</span>
-            <span class="badge-priority">P${r.priority}</span>
+            <span>${escapeHtml(r.title)}</span>
+            <span class="badge-priority">P${escapeHtml(r.priority)}</span>
           </div>
-          <div class="card-desc">${r.detail}</div>
+          <div class="card-desc">${escapeHtml(r.detail)}</div>
         `;
         recContainer.appendChild(item);
       });
@@ -207,8 +219,8 @@ function renderContextData(data) {
         const item = document.createElement("div");
         item.className = "card-item";
         item.innerHTML = `
-          <div class="card-title" style="color: #f87171;">⚠️ ${rk.category.toUpperCase()}</div>
-          <div class="card-desc">${rk.description}</div>
+          <div class="card-title" style="color: #f87171;">⚠️ ${escapeHtml(rk.category?.toUpperCase() || "")}</div>
+          <div class="card-desc">${escapeHtml(rk.description)}</div>
         `;
         riskContainer.appendChild(item);
       });
@@ -249,7 +261,7 @@ async function renderDestinationInsight() {
   container.innerHTML = `
     <div class="card-item">
       <div class="card-title">
-        <span>🏁 前往【${state.destination.name || "目的地"}】</span>
+        <span>🏁 前往【${escapeHtml(state.destination.name || "目的地")}】</span>
       </div>
       <div class="card-desc">
         ${state.identity === "car" || state.identity === "ev" ? "🎯 目的地周邊推薦停車場：<strong>府前廣場地下場</strong> (剩餘 142 格，無須排隊)。" 
@@ -264,7 +276,7 @@ async function renderDestinationInsight() {
 async function handleRoutePlan() {
   const resultContainer = document.getElementById("route-result-container");
   if (resultContainer) {
-    resultContainer.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">🔄 AI 正在為您計算從【${state.origin.name}】到【${state.destination.name}】的情境導航策略...</div>`;
+    resultContainer.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">🔄 AI 正在為您計算從【${escapeHtml(state.origin.name)}】到【${escapeHtml(state.destination.name)}】的情境導航策略...</div>`;
   }
 
   try {
@@ -280,37 +292,37 @@ async function handleRoutePlan() {
       resultContainer.innerHTML = `
         <div class="card-item" style="border-color: var(--accent-blue);">
           <div class="card-title" style="color: #60a5fa; font-size: 15px;">
-            🧭 ${route.recommendedStrategy?.title || "推薦路線"}
+            🧭 ${escapeHtml(route.recommendedStrategy?.title || "推薦路線")}
           </div>
           <div class="card-desc" style="margin-top: 6px; font-size: 14px; color:#f8fafc;">
-            ${route.recommendedStrategy?.routeDescription}
+            ${escapeHtml(route.recommendedStrategy?.routeDescription || "")}
           </div>
         </div>
 
         ${destPlan ? `
         <div class="card-item" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.4);">
           <div class="card-title" style="color: #34d399;">
-            🅿️ 目的地停車指引：【${destPlan.ParkingLotName}】
+            🅿️ 目的地停車指引：【${escapeHtml(destPlan.ParkingLotName)}】
           </div>
           <div class="card-desc">
-            目前尚有 <strong>${destPlan.AvailableSpaces}</strong> 格空位（距目的地 ${destPlan.DistanceMeters || 350}m，費率 ${destPlan.HourlyRate || 40}元/時），進場無須排隊。
+            目前尚有 <strong>${escapeHtml(destPlan.AvailableSpaces)}</strong> 格空位（距目的地 ${escapeHtml(destPlan.DistanceMeters || 350)}m，費率 ${escapeHtml(destPlan.HourlyRate || 40)}元/時），進場無須排隊。
           </div>
         </div>` : ""}
 
         ${route.alternativeOptions?.length > 0 ? `
         <div class="card-item">
           <div class="card-title" style="color: #c084fc;">
-            ${route.alternativeOptions[0].title}
+            ${escapeHtml(route.alternativeOptions[0].title)}
           </div>
           <div class="card-desc">
-            ${route.alternativeOptions[0].steps} — <em>優勢: ${route.alternativeOptions[0].advantage}</em>
+            ${escapeHtml(route.alternativeOptions[0].steps)} — <em>優勢: ${escapeHtml(route.alternativeOptions[0].advantage)}</em>
           </div>
         </div>` : ""}
       `;
     }
   } catch (err) {
     if (resultContainer) {
-      resultContainer.innerHTML = `<div class="card-item" style="color:#f87171;">❌ 路線規劃失敗: ${err.message}</div>`;
+      resultContainer.innerHTML = `<div class="card-item" style="color:#f87171;">❌ 路線規劃失敗: ${escapeHtml(err.message)}</div>`;
     }
   }
 }
@@ -531,13 +543,13 @@ function setupFavoritesModal() {
       row.className = "fav-item-row";
       row.innerHTML = `
         <div class="fav-item-info">
-          <span class="fav-alias">${f.alias}</span>
-          <span class="fav-coord">${f.name} (${f.latitude}, ${f.longitude})</span>
+          <span class="fav-alias">${escapeHtml(f.alias)}</span>
+          <span class="fav-coord">${escapeHtml(f.name)} (${escapeHtml(f.latitude)}, ${escapeHtml(f.longitude)})</span>
         </div>
         <div class="fav-btn-group">
-          <button class="btn-small" data-set-origin="${f.id}">設為出發</button>
-          <button class="btn-small" data-set-dest="${f.id}">設為目的</button>
-          <button class="btn-small delete" data-delete-fav="${f.id}">刪除</button>
+          <button class="btn-small" data-set-origin="${escapeHtml(f.id)}">設為出發</button>
+          <button class="btn-small" data-set-dest="${escapeHtml(f.id)}">設為目的</button>
+          <button class="btn-small delete" data-delete-fav="${escapeHtml(f.id)}">刪除</button>
         </div>
       `;
 

@@ -11,10 +11,33 @@ import { executeGithubBriefing } from "../cron/githubBriefing";
 
 export const webhookRouter = new Hono<{ Bindings: Env }>();
 
-// CORS Preflight
+// CORS Allowed Origins (restricted to known LIFF and Pages domains)
+const PA_ALLOWED_ORIGINS = [
+  "https://liff.line.me",
+  "https://miniapp.line.me",
+  "https://motc-mini-dog.pages.dev"
+];
+
+function getCorsOrigin(origin: string): string {
+  if (PA_ALLOWED_ORIGINS.includes(origin)) return origin;
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return origin;
+  if (/^https:\/\/[a-z0-9-]+\.motc-mini-dog\.pages\.dev$/.test(origin)) return origin;
+  return PA_ALLOWED_ORIGINS[0];
+}
+
+function isOriginAllowed(origin: string): boolean {
+  if (!origin) return true; // Server-to-server or non-browser
+  if (PA_ALLOWED_ORIGINS.includes(origin)) return true;
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  if (/^https:\/\/[a-z0-9-]+\.motc-mini-dog\.pages\.dev$/.test(origin)) return true;
+  return false;
+}
+
 webhookRouter.options("/*", (c) => {
+  const origin = c.req.header("origin") || "";
+  const corsOrigin = getCorsOrigin(origin);
   return c.body(null, 204, {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": corsOrigin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization"
   });
@@ -31,28 +54,33 @@ webhookRouter.get("/health", (c) => {
 });
 
 webhookRouter.get("/debug", async (c) => {
-  const secret = c.env.LINE_CHANNEL_SECRET || "";
-  const token = c.env.LINE_CHANNEL_ACCESS_TOKEN || "";
-  const discordUrl = c.env.DISCORD_WEBHOOK_URL || "";
-  const allowed = c.env.ALLOWED_USER_ID || "";
+  // Auth: require CRON_SECRET to access debug info
+  const authKey = c.req.query("key");
+  if (!authKey || authKey !== c.env.CRON_SECRET) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
 
   return c.json({
     status: "ok",
     service: "personal-assistant-worker",
     timestamp: new Date().toISOString(),
     config: {
-      hasChannelSecret: secret.length > 0,
-      secretPreview: secret ? `${secret.slice(0, 4)}...${secret.slice(-4)}` : "missing",
-      hasAccessToken: token.length > 0,
-      tokenLength: token.length,
-      hasDiscordWebhook: discordUrl.length > 0,
-      allowedUserIds: allowed.split(",").map((s) => s.trim()).filter(Boolean)
+      hasChannelSecret: (c.env.LINE_CHANNEL_SECRET || "").length > 0,
+      hasAccessToken: (c.env.LINE_CHANNEL_ACCESS_TOKEN || "").length > 0,
+      hasDiscordWebhook: (c.env.DISCORD_WEBHOOK_URL || "").length > 0,
+      hasCronSecret: (c.env.CRON_SECRET || "").length > 0
     }
   });
 });
 
-// Manual Cron Trigger for Testing
+// Manual Cron Trigger for Testing (Auth Required)
 webhookRouter.get("/cron/trigger", async (c) => {
+  // Auth: require CRON_SECRET to trigger briefings
+  const authKey = c.req.query("key");
+  if (!authKey || authKey !== c.env.CRON_SECRET) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
   const type = c.req.query("type") || "stock";
   let success = false;
 
@@ -68,7 +96,7 @@ webhookRouter.get("/cron/trigger", async (c) => {
   return c.json({
     status: success ? "success" : "failed",
     type,
-    message: `Triggered ${type} briefing to bfg007 LINE bot.`
+    message: `Triggered ${type} briefing.`
   });
 });
 
@@ -179,18 +207,35 @@ webhookRouter.post("/webhook", async (c) => {
   return c.text("OK", 200);
 });
 
-// API endpoint for Mini App Voice2Text Studio
+// API endpoint for Mini App Voice2Text Studio (Origin-restricted & Authenticated)
 webhookRouter.post("/api/transcribe", async (c) => {
+  const origin = c.req.header("origin") || "";
+  if (origin && !isOriginAllowed(origin)) {
+    return c.json({ error: "Forbidden: Unauthorized origin" }, 403);
+  }
+  const corsOrigin = getCorsOrigin(origin);
+
   try {
     const body = (await c.req.json()) as {
       audioBase64?: string;
       mimeType?: string;
       speakerDiarization?: boolean;
+      userId?: string;
     };
+
+    // User authorization check if ALLOWED_USER_ID is set
+    if (c.env.ALLOWED_USER_ID && body.userId && body.userId !== "user_guest") {
+      const allowedList = c.env.ALLOWED_USER_ID.split(",").map((s) => s.trim()).filter(Boolean);
+      if (allowedList.length > 0 && !allowedList.includes(body.userId)) {
+        return c.json({ error: "Forbidden: User ID not in allowed whitelist" }, 403, {
+          "Access-Control-Allow-Origin": corsOrigin
+        });
+      }
+    }
 
     if (!body.audioBase64) {
       return c.json({ error: "Missing audioBase64" }, 400, {
-        "Access-Control-Allow-Origin": "*"
+        "Access-Control-Allow-Origin": corsOrigin
       });
     }
 
@@ -209,12 +254,12 @@ webhookRouter.post("/api/transcribe", async (c) => {
     );
 
     return c.json(result, 200, {
-      "Access-Control-Allow-Origin": "*"
+      "Access-Control-Allow-Origin": corsOrigin
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return c.json({ error: msg }, 500, {
-      "Access-Control-Allow-Origin": "*"
+      "Access-Control-Allow-Origin": corsOrigin
     });
   }
 });

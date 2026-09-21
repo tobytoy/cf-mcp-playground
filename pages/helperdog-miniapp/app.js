@@ -482,8 +482,8 @@ function renderFilesList(files) {
       </div>
       
       <div class="file-actions">
-        <a href="${f.url}" target="_blank" class="btn-sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> 開啟 Drive</a>
-        <button class="btn-sm danger" onclick="deleteVaultFile('${f.id}')"><i class="fa-regular fa-trash-can"></i> 刪除</button>
+        <a href="${f.url && f.url.startsWith('https://') ? escapeHtml(f.url) : '#'}" target="_blank" rel="noopener noreferrer" class="btn-sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> 開啟 Drive</a>
+        <button class="btn-sm danger" onclick="deleteVaultFile('${escapeHtml(f.id)}')"><i class="fa-regular fa-trash-can"></i> 刪除</button>
       </div>
     `;
     DOM.filesContainer.appendChild(card);
@@ -563,13 +563,13 @@ function renderTodoList(filter = "進行中") {
     itemCard.className = `todo-item-card ${isCompleted ? "completed" : ""}`;
     itemCard.innerHTML = `
       <div class="todo-left">
-        <input type="checkbox" ${isCompleted ? "checked" : ""} onchange="toggleTodo('${todo.id}')">
+        <input type="checkbox" ${isCompleted ? "checked" : ""} onchange="toggleTodo('${escapeHtml(todo.id)}')">
         <div>
           <div class="todo-text">${escapeHtml(todo.item)}</div>
-          <div class="todo-meta">[${todo.category}] • ${String(todo.createdAt || "").split("T")[0].split(" ")[0]} • ${todo.id}</div>
+          <div class="todo-meta">[${escapeHtml(todo.category)}] • ${escapeHtml(String(todo.createdAt || "").split("T")[0].split(" ")[0])} • ${escapeHtml(todo.id)}</div>
         </div>
       </div>
-      <span class="file-badge">${todo.status}</span>
+      <span class="file-badge">${escapeHtml(todo.status)}</span>
     `;
     DOM.todoListContainer.appendChild(itemCard);
   });

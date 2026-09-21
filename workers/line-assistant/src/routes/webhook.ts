@@ -46,7 +46,15 @@ webhookRouter.post("/webhook", async (c) => {
   // 2. Dispatch events asynchronously with ctx.waitUntil
   for (const event of events) {
     const senderId = event.source?.userId;
-    const isAllowed = !c.env.ALLOWED_USER_ID || !senderId || senderId === c.env.ALLOWED_USER_ID;
+    let isAllowed = true;
+
+    // Multi-user whitelist verification (supports comma-separated IDs)
+    if (c.env.ALLOWED_USER_ID && senderId) {
+      const allowedList = c.env.ALLOWED_USER_ID.split(",").map((s) => s.trim());
+      if (!allowedList.includes(senderId)) {
+        isAllowed = false;
+      }
+    }
 
     try {
       c.executionCtx.waitUntil(discord.sendWebhookEvent(event as unknown as Record<string, unknown>, isAllowed));
@@ -80,6 +88,11 @@ webhookRouter.get("/health", (c) => {
 });
 
 webhookRouter.get("/debug", async (c) => {
+  // Auth: require CRON_SECRET to access debug info
+  const authKey = c.req.query("key");
+  if (!authKey || authKey !== c.env.CRON_SECRET) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
   const logger = new DiagnosticLogger(c.env.ASSISTANT_KV);
   const logs = await logger.getRecentLogs(30);
   return c.json({
@@ -90,6 +103,11 @@ webhookRouter.get("/debug", async (c) => {
 });
 
 webhookRouter.get("/debug/errors", async (c) => {
+  // Auth: require CRON_SECRET to access error logs
+  const authKey = c.req.query("key");
+  if (!authKey || authKey !== c.env.CRON_SECRET) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
   const logger = new DiagnosticLogger(c.env.ASSISTANT_KV);
   const errors = await logger.getRecentErrors(20);
   return c.json({
@@ -100,6 +118,12 @@ webhookRouter.get("/debug/errors", async (c) => {
 });
 
 webhookRouter.get("/cron/trigger", async (c) => {
+  // Auth: require CRON_SECRET to trigger briefings
+  const authKey = c.req.query("key");
+  if (!authKey || authKey !== c.env.CRON_SECRET) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
   const type = c.req.query("type") || "morning";
   let success = false;
 
@@ -114,16 +138,28 @@ webhookRouter.get("/cron/trigger", async (c) => {
   return c.json({
     status: success ? "success" : "failed",
     type,
-    message: `Triggered ${type} briefing push to LINE.`
+    message: `Triggered ${type} briefing.`
   });
 });
 
-// =========================================================================
-// Study Mouse LINE Mini App Member API (CORS Enabled)
-// =========================================================================
+// Study Mouse LINE Mini App Member API (CORS Restricted)
+const STUDYMOUSE_ALLOWED_ORIGINS = [
+  "https://liff.line.me",
+  "https://miniapp.line.me",
+  "https://motc-mini-dog.pages.dev"
+];
+
+function getStudyMouseCorsOrigin(origin: string): string {
+  if (STUDYMOUSE_ALLOWED_ORIGINS.includes(origin)) return origin;
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return origin;
+  if (/^https:\/\/[a-z0-9-]+\.motc-mini-dog\.pages\.dev$/.test(origin)) return origin;
+  return STUDYMOUSE_ALLOWED_ORIGINS[0];
+}
+
 webhookRouter.options("/api/studymouse/*", (c) => {
+  const corsOrigin = getStudyMouseCorsOrigin(c.req.header("origin") || "");
   return c.body(null, 204, {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": corsOrigin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   });
@@ -134,7 +170,7 @@ webhookRouter.post("/api/studymouse/apply", async (c) => {
     const body = await c.req.json() as StudyMouseApplication;
     if (!body.userId || !body.ticketId) {
       return c.json({ error: "Missing required fields" }, 400, {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": getStudyMouseCorsOrigin(c.req.header("origin") || ""),
       });
     }
 
@@ -148,12 +184,12 @@ webhookRouter.post("/api/studymouse/apply", async (c) => {
 
     const res = await manager.submitApplication(body);
     return c.json(res, 200, {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": getStudyMouseCorsOrigin(c.req.header("origin") || ""),
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return c.json({ error: msg }, 500, {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": getStudyMouseCorsOrigin(c.req.header("origin") || ""),
     });
   }
 });
@@ -169,7 +205,7 @@ webhookRouter.post("/api/studymouse/feedback", async (c) => {
 
     if (!body.userId || !body.message) {
       return c.json({ error: "Missing required fields" }, 400, {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": getStudyMouseCorsOrigin(c.req.header("origin") || ""),
       });
     }
 
@@ -183,12 +219,12 @@ webhookRouter.post("/api/studymouse/feedback", async (c) => {
 
     const res = await manager.recordFeedback(body);
     return c.json(res, 200, {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": getStudyMouseCorsOrigin(c.req.header("origin") || ""),
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return c.json({ error: msg }, 500, {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": getStudyMouseCorsOrigin(c.req.header("origin") || ""),
     });
   }
 });
@@ -198,7 +234,7 @@ webhookRouter.get("/api/studymouse/status", async (c) => {
   const userId = c.req.query("userId");
   if (!userId) {
     return c.json({ error: "Missing userId query param" }, 400, {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": getStudyMouseCorsOrigin(c.req.header("origin") || ""),
     });
   }
 
@@ -209,6 +245,6 @@ webhookRouter.get("/api/studymouse/status", async (c) => {
 
   const res = await manager.checkStatus(userId);
   return c.json(res, 200, {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": getStudyMouseCorsOrigin(c.req.header("origin") || ""),
   });
 });
