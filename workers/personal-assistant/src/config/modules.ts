@@ -88,6 +88,16 @@ export const MODULES_REGISTRY: ModuleConfig[] = [
     keywords: ["搜尋", "查一下", "查詢", "最新"]
   },
   {
+    id: "rss_reader",
+    name: "📰 MOTC 即時情報站 (RSS 閱讀器)",
+    icon: "📰",
+    category: "智慧分析",
+    description: "聚合科技新報、iThome、自由時報、Google 新聞等多源即時情報，支援關鍵字檢索與隨開即讀 PWA Web App。",
+    example: "RSS / 最新新聞 / RSS AI",
+    enabled_for: ["personal", "work"],
+    keywords: ["rss", "新聞", "情報", "科技新聞", "閱讀器", "即時新聞"]
+  },
+  {
     id: "discord_logger",
     name: "🔔 Discord 異常告警與監控通知",
     icon: "🔔",

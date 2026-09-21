@@ -70,7 +70,7 @@ export class NeedleClassifier {
     }
 
     // 4. Todo Management -> manage_todo
-    if (/^(查看待辦|列出待辦|我的待辦|待辦事項|待辦清單|代辦清單|待辦有哪些|有哪些待辦|待辦|代辦|todo)$/i.test(trimmed)) {
+    if (/^(查看待辦|查看待辦事項|列出待辦|我的待辦|待辦事項|待辦清單|代辦清單|待辦事項清單|待辦有哪些|有哪些待辦|待辦|代辦|todo)$/i.test(trimmed)) {
       return {
         tool: "manage_todo",
         arguments: { action: "list" },
@@ -144,6 +144,58 @@ export class NeedleClassifier {
         arguments: {},
         confidence: 0.99,
         reasoning: "Heuristic: Detected morning briefing request"
+      };
+    }
+    // 5bb. GitHub Trending & FindARepo Briefings -> briefing_github
+    if (/(?:推薦|找|查看|最新)?\s*(?:mcp|mcp\s*伺服器|mcp\s*工具|mcp\s*servers?)/i.test(trimmed)) {
+      return {
+        tool: "briefing_github",
+        arguments: { topic: "mcp" },
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected MCP server recommendation request"
+      };
+    }
+
+    if (/(?:推薦|找|查看|最新)?\s*(?:ai\s*agent|agent|智慧代理|自主代理)/i.test(trimmed)) {
+      return {
+        tool: "briefing_github",
+        arguments: { topic: "ai-agents" },
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected AI Agent recommendation request"
+      };
+    }
+
+    if (/(?:推薦|找|查看|最新)?\s*(?:dev\s*tools?|開發神器|開發工具)/i.test(trimmed)) {
+      return {
+        tool: "briefing_github",
+        arguments: { topic: "dev-tools" },
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected Dev Tools recommendation request"
+      };
+    }
+
+    if (/(github|開源|開源專案|熱門專案|github\s*黑馬|開源黑馬|開源精選|trending\s*repos?)/i.test(trimmed)) {
+      return {
+        tool: "briefing_github",
+        arguments: {},
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected GitHub trending briefing request"
+      };
+    }
+
+    // 5c. MOTC RSS Intelligence Reader -> rss_reader
+    if (
+      /^(?:幫我|請幫我|我想|想)?(?:看|讀|打開|開啟)?(?:最新)?(?:rss|新聞|情報|即時情報|即時新聞|科技新聞|資安新聞|今日頭條)(?:閱讀器|站)?$/i.test(trimmed) ||
+      /(?:motc-mini-dog\.pages\.dev\/rss|rss\s*閱讀器|即時情報站|rss\s*情報)/i.test(trimmed) ||
+      /^(?:rss|新聞|情報)[:：\s]+(.+)$/i.test(trimmed)
+    ) {
+      const match = trimmed.match(/^(?:rss|新聞|情報)[:：\s]+(.+)$/i);
+      const query = match ? match[1].trim() : "";
+      return {
+        tool: "rss_reader",
+        arguments: { query },
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected MOTC RSS Reader / news inquiry"
       };
     }
 

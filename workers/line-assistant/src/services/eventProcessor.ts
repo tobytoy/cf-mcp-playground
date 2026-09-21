@@ -315,7 +315,8 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
           break;
         }
         case "briefing_github": {
-          await executeGithubBriefing(env, userId);
+          const topic = (routing.arguments.topic as string) || undefined;
+          await executeGithubBriefing(env, userId, { topic });
           break;
         }
 

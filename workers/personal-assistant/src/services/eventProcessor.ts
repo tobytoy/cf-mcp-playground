@@ -10,6 +10,7 @@ import {
   createWeatherFlexMessage,
   createLocationTransportFlexMessage,
   createSearchFlexMessage,
+  createRssFeedFlexMessage,
   DEFAULT_QUICK_REPLY
 } from "../line/templates";
 import { createFeatureListFlexMessage } from "../config/modules";
@@ -26,6 +27,8 @@ import { generateAiResponse } from "../tools/aiChat";
 import { DiscordLogger } from "../tools/discordLogger";
 import { executeStockBriefing } from "../cron/stockBriefing";
 import { executeMorningBriefing } from "../cron/morningBriefing";
+import { executeGithubBriefing } from "../cron/githubBriefing";
+import { getRssFeed } from "../tools/rssReader";
 
 export async function processLineEvent(event: LineEvent, env: Env): Promise<void> {
   const startTime = Date.now();
@@ -329,6 +332,12 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
           await executeMorningBriefing(env, userId);
           break;
         }
+        case "briefing_github": {
+          const topic = (routing.arguments.topic as string) || undefined;
+          await executeGithubBriefing(env, userId, { topic });
+          break;
+        }
+
 
         // Search
         case "search_web": {
@@ -339,6 +348,14 @@ export async function processLineEvent(event: LineEvent, env: Env): Promise<void
             userId,
             createSearchFlexMessage(searchRes.query, searchRes.summary, searchRes.results)
           );
+          break;
+        }
+
+        // MOTC RSS Feed & Intelligence Reader
+        case "rss_reader": {
+          const query = (routing.arguments.query as string) || "";
+          const feedResult = await getRssFeed({ query, limit: 5 });
+          await lineClient.replyOrPush(replyToken, userId, createRssFeedFlexMessage(feedResult));
           break;
         }
 

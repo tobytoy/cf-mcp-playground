@@ -42,7 +42,8 @@ export async function generateAiResponse(
   targetModel: GeminiModel | string = "gemini-3.5-flash-lite",
   history: ChatMessage[] = [],
   style: "concise" | "detailed" | "code" | "creative" = "concise",
-  userLocation?: UserSavedLocation
+  userLocation?: UserSavedLocation,
+  customSystemPrompt?: string
 ): Promise<AiResponseResult> {
   if (!apiKey) {
     return { text: "尚未設定 GEMINI_API_KEY，請確認環境變數。", modelUsed: "none" };
@@ -67,7 +68,7 @@ export async function generateAiResponse(
     ? `${userLocation.address || userLocation.title} (經度: ${userLocation.longitude}, 緯度: ${userLocation.latitude}，定位更新於: ${userLocation.updatedAt})`
     : "台北市士林區天母忠誠路二段（天母棒球場/高島屋周邊）";
 
-  let systemPrompt = `你是一個貼心、高效、高智慧的個人專屬 LINE 助理。
+  let systemPrompt = customSystemPrompt || `你是一個貼心、高效、高智慧的個人專屬 LINE 助理。
 【個人化使用者資訊與時區背景】：
 • 目前標準時間：台灣時間 (UTC+8 / Asia/Taipei) — ${twTime}
 • 使用者目前即時定位：${currentLocText}

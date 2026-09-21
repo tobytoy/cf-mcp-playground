@@ -1462,73 +1462,251 @@ export function createStockBriefingFlexMessage(info: {
   };
 }
 
+export interface GithubBriefingRepoItem {
+  name: string;
+  url: string;
+  description: string;
+  language?: string | null;
+  stars: number;
+  velocityBadge?: string | null;
+  activityBadge?: string | null;
+  license?: string | null;
+}
+
 export function createGithubBriefingFlexMessage(info: {
   dateStr: string;
   timeStr: string;
-  repos: Array<{ name: string; url: string; description: string; language: string; stars: number }>;
+  thematicTitle?: string;
+  thematicSubtitle?: string;
+  tagBadge?: string;
+  repos: GithubBriefingRepoItem[];
 }): OutgoingLineMessage {
-  const repoBoxes = info.repos.map((r, i) => ({
-    type: "box",
-    layout: "vertical",
-    margin: "md",
-    backgroundColor: "#F8FAFC",
-    cornerRadius: "md",
-    paddingAll: "md",
-    action: {
-      type: "uri",
-      label: r.name,
-      uri: r.url
-    },
-    contents: [
-      {
-        type: "box",
-        layout: "horizontal",
-        contents: [
-          { type: "text", text: `${i + 1}. ${r.name}`, weight: "bold", size: "xs", color: "#0969DA", flex: 4, wrap: true },
-          { type: "text", text: `⭐ ${r.stars.toLocaleString()}`, weight: "bold", size: "xs", color: "#F59E0B", align: "end", flex: 2 }
-        ]
-      },
-      {
+  const themeTitle = info.thematicTitle || "今日開源熱門黑馬";
+  const themeSubtitle = info.thematicSubtitle || "FindARepo 速度與活躍度每日精選";
+  const tagBadge = info.tagBadge || "🔥 增速黑馬";
+
+  const repoBoxes = info.repos.map((r, i) => {
+    const badges: Array<Record<string, unknown>> = [];
+
+    if (r.velocityBadge) {
+      badges.push({
         type: "text",
-        text: r.description,
+        text: `📈 ${r.velocityBadge}`,
         size: "xxs",
-        color: "#475569",
-        wrap: true,
-        margin: "xs"
+        color: "#16A34A",
+        weight: "bold",
+        margin: "none"
+      });
+    }
+
+    if (r.activityBadge) {
+      badges.push({
+        type: "text",
+        text: r.activityBadge,
+        size: "xxs",
+        color: "#6366F1",
+        weight: "bold",
+        margin: "none"
+      });
+    }
+
+    return {
+      type: "box",
+      layout: "vertical",
+      margin: "md",
+      backgroundColor: "#F8FAFC",
+      cornerRadius: "md",
+      paddingAll: "md",
+      action: {
+        type: "uri",
+        label: r.name,
+        uri: r.url
       },
-      {
-        type: "box",
-        layout: "horizontal",
-        margin: "xs",
-        contents: [
-          { type: "text", text: `語言: ${r.language}`, size: "xxs", color: "#64748B" }
-        ]
-      }
-    ]
-  }));
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            {
+              type: "text",
+              text: `${i + 1}. ${r.name}`,
+              weight: "bold",
+              size: "xs",
+              color: "#0969DA",
+              flex: 4,
+              wrap: true
+            },
+            {
+              type: "text",
+              text: `⭐ ${r.stars.toLocaleString()}`,
+              weight: "bold",
+              size: "xs",
+              color: "#F59E0B",
+              align: "end",
+              flex: 2
+            }
+          ]
+        },
+        ...(badges.length > 0
+          ? [
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                margin: "xs",
+                contents: badges
+              }
+            ]
+          : []),
+        {
+          type: "text",
+          text: r.description,
+          size: "xxs",
+          color: "#334155",
+          wrap: true,
+          margin: "xs"
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          margin: "xs",
+          contents: [
+            {
+              type: "text",
+              text: `語言: ${r.language || "Multi"}${r.license ? ` · 授權: ${r.license}` : ""}`,
+              size: "xxs",
+              color: "#94A3B8"
+            }
+          ]
+        }
+      ]
+    };
+  });
 
   return {
     type: "flex",
-    altText: `🚀 【GitHub 今日熱點黑馬】${info.dateStr} 19:00 增長最快的開源新星`,
+    altText: `🚀 【GitHub 開源精選】${themeTitle} (${info.dateStr} 19:00)`,
     contents: {
       type: "bubble",
       header: {
         type: "box",
         layout: "vertical",
-        backgroundColor: "#1F2937", // GitHub dark
+        backgroundColor: "#0F172A",
         paddingAll: "lg",
         contents: [
-          { type: "text", text: "🚀 GitHub 今日熱門開源黑馬", color: "#FFFFFF", weight: "bold", size: "md" },
-          { type: "text", text: `📅 台灣時間 ${info.dateStr} ${info.timeStr} (點擊可開啟倉庫)`, color: "#E5E7EB", size: "xs", margin: "xs" }
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              {
+                type: "text",
+                text: "🚀 GitHub 開源精選",
+                color: "#FFFFFF",
+                weight: "bold",
+                size: "md",
+                flex: 4
+              },
+              {
+                type: "text",
+                text: tagBadge,
+                color: "#38BDF8",
+                size: "xs",
+                align: "end",
+                weight: "bold",
+                flex: 3
+              }
+            ]
+          },
+          {
+            type: "text",
+            text: `📌 ${themeTitle}`,
+            color: "#F8FAFC",
+            size: "xs",
+            weight: "bold",
+            margin: "xs"
+          },
+          {
+            type: "text",
+            text: `💡 ${themeSubtitle}`,
+            color: "#94A3B8",
+            size: "xxs",
+            margin: "xs",
+            wrap: true
+          }
         ]
       },
       body: {
         type: "box",
         layout: "vertical",
-        paddingAll: "lg",
+        paddingAll: "md",
         contents: [
-          { type: "text", text: "🔥 今日 Star 增長最快的開源新專案：", weight: "bold", size: "xs", color: "#64748B" },
+          {
+            type: "text",
+            text: "點擊任一專案卡片可直接跳轉至 GitHub 倉庫：",
+            size: "xxs",
+            color: "#64748B",
+            margin: "none"
+          },
           ...repoBoxes
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "md",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#2563EB",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "🌐 瀏覽 FindARepo 每日數據榜",
+              uri: "https://findarepo.com/trending/"
+            }
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                flex: 1,
+                action: {
+                  type: "message",
+                  label: "🔌 推薦 MCP",
+                  text: "推薦 MCP"
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                flex: 1,
+                action: {
+                  type: "message",
+                  label: "🤖 AI 代理",
+                  text: "推薦 agent"
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                flex: 1,
+                action: {
+                  type: "message",
+                  label: "🛠️ 開發神器",
+                  text: "推薦 dev tools"
+                }
+              }
+            ]
+          }
         ]
       }
     },

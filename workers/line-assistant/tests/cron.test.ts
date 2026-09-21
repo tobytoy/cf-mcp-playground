@@ -24,13 +24,13 @@ export async function testCronAndMarketBriefings(): Promise<void> {
   }
 
   // 3. Test GitHub Trending Repos
-  const repos = await fetchTrendingGitHubRepos();
-  console.log(`  ✔ GitHub Trending Repos fetched: ${repos.length} repos`);
+  const { repos, config } = await fetchTrendingGitHubRepos();
+  console.log(`  ✔ GitHub Trending Repos fetched (${config.dayName}：${config.themeTitle}): ${repos.length} repos`);
   if (repos.length === 0) {
     throw new Error("GitHub trending repos fetch failed!");
   }
   for (const r of repos.slice(0, 3)) {
-    console.log(`     • ⭐ ${r.stars.toLocaleString()} | ${r.name} (${r.language}): ${r.description.slice(0, 30)}…`);
+    console.log(`     • ⭐ ${r.stars.toLocaleString()} | ${r.name} (${r.language}) [${r.velocityBadge || "無"}]: ${r.description.slice(0, 30)}…`);
   }
 
   // 4. Test Needle Intent Routing for Briefing Commands
@@ -58,6 +58,18 @@ export async function testCronAndMarketBriefings(): Promise<void> {
     throw new Error(`Expected briefing_github, got ${route3.tool}`);
   }
   console.log(`  ✔ '看今天 github 熱點專案' -> ${route3.tool}`);
+
+  const routeMcp = await classifier.classify("推薦 MCP");
+  if (routeMcp.tool !== "briefing_github" || routeMcp.arguments.topic !== "mcp") {
+    throw new Error(`Expected briefing_github with topic mcp, got ${routeMcp.tool}`);
+  }
+  console.log(`  ✔ '推薦 MCP' -> ${routeMcp.tool} (topic: ${routeMcp.arguments.topic})`);
+
+  const routeAgent = await classifier.classify("推薦 agent");
+  if (routeAgent.tool !== "briefing_github" || routeAgent.arguments.topic !== "ai-agents") {
+    throw new Error(`Expected briefing_github with topic ai-agents, got ${routeAgent.tool}`);
+  }
+  console.log(`  ✔ '推薦 agent' -> ${routeAgent.tool} (topic: ${routeAgent.arguments.topic})`);
 
   console.log("✅ Cron & Market Briefings tests passed!\n");
 }

@@ -59,7 +59,8 @@ webhookRouter.get("/cron/trigger", async (c) => {
   if (type === "morning") {
     success = await executeMorningBriefing(c.env);
   } else if (type === "github") {
-    success = await executeGithubBriefing(c.env);
+    const topic = c.req.query("topic");
+    success = await executeGithubBriefing(c.env, undefined, topic ? { topic } : undefined);
   } else {
     success = await executeStockBriefing(c.env);
   }

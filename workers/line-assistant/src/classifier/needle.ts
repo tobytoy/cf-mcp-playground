@@ -271,7 +271,35 @@ export class NeedleClassifier {
       };
     }
 
-    if (/(github\s*(熱點|趨勢|熱門|專案|repo)|開源黑馬|開源專案|熱門repo|trending)/i.test(prompt)) {
+    // 9bb. GitHub Trending & FindARepo Briefings -> briefing_github
+    if (/(?:推薦|找|查看|最新)?\s*(?:mcp|mcp\s*伺服器|mcp\s*工具|mcp\s*servers?)/i.test(prompt)) {
+      return {
+        tool: "briefing_github",
+        arguments: { topic: "mcp" },
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected MCP server recommendation request"
+      };
+    }
+
+    if (/(?:推薦|找|查看|最新)?\s*(?:ai\s*agent|agent|智慧代理|自主代理)/i.test(prompt)) {
+      return {
+        tool: "briefing_github",
+        arguments: { topic: "ai-agents" },
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected AI Agent recommendation request"
+      };
+    }
+
+    if (/(?:推薦|找|查看|最新)?\s*(?:dev\s*tools?|開發神器|開發工具)/i.test(prompt)) {
+      return {
+        tool: "briefing_github",
+        arguments: { topic: "dev-tools" },
+        confidence: 0.99,
+        reasoning: "Heuristic: Detected Dev Tools recommendation request"
+      };
+    }
+
+    if (/(github\s*(熱點|趨勢|熱門|專案|repo|黑馬)|開源黑馬|開源專案|熱門repo|trending)/i.test(prompt)) {
       return {
         tool: "briefing_github",
         arguments: {},

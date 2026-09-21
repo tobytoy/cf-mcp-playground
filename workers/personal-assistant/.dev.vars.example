@@ -1,7 +1,7 @@
 # LINE Messaging API Credentials
 LINE_CHANNEL_SECRET=your_channel_secret_here
 LINE_CHANNEL_ACCESS_TOKEN=your_access_token_here
-ALLOWED_USER_ID=Uba361995b7ae8345b4a23e195253d27c
+ALLOWED_USER_ID=your_line_user_id_here
 
 # AI Keys
 GEMINI_API_KEY=your_gemini_api_key_here

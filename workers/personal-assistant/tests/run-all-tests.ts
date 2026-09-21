@@ -6,15 +6,17 @@ import { DiscordLogger } from "../src/tools/discordLogger";
 import { getEnabledModules, createFeatureListFlexMessage } from "../src/config/modules";
 import { getNearbyTransportContext } from "../src/tools/tdxTransport";
 import { getTaiwanWeatherForecast } from "../src/tools/weather";
-import { createLocationTransportFlexMessage, createPromoProjectsFlexMessage } from "../src/line/templates";
+import { createLocationTransportFlexMessage, createPromoProjectsFlexMessage, createRssFeedFlexMessage, createGithubBriefingFlexMessage } from "../src/line/templates";
 import { fetchMorningFinanceSnapshot, fetchTaiwanStockSnapshot } from "../src/tools/financeData";
+import { getRssFeed } from "../src/tools/rssReader";
+import { getThematicConfig, fetchFindARepoData, formatActivityBadge, formatVelocityBadge } from "../src/tools/findarepo";
 import { app } from "../src/index";
 import type { Env } from "../src/types/env";
 
 const MOCK_ENV: Env = {
   LINE_CHANNEL_SECRET: "mock_personal_secret_12345",
   LINE_CHANNEL_ACCESS_TOKEN: "mock_access_token",
-  ALLOWED_USER_ID: "Uba361995b7ae8345b4a23e195253d27c",
+  ALLOWED_USER_ID: "U_AUTHORIZED_USER_12345",
   GEMINI_API_KEY: "mock_gemini_key",
   DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/mock"
 };
@@ -101,13 +103,75 @@ async function main() {
   const rMorning = classifier.classify("查看美股早報");
   if (rMorning.tool !== "briefing_morning") throw new Error(`Expected briefing_morning, got ${rMorning.tool}`);
   console.log(`  ✔ '查看美股早報' -> ${rMorning.tool}\n`);
+  const rRss = classifier.classify("RSS");
+  if (rRss.tool !== "rss_reader") throw new Error(`Expected rss_reader, got ${rRss.tool}`);
+  console.log(`  ✔ 'RSS' -> ${rRss.tool}`);
+
+  const rNews = classifier.classify("看新聞");
+  if (rNews.tool !== "rss_reader") throw new Error(`Expected rss_reader, got ${rNews.tool}`);
+  console.log(`  ✔ '看新聞' -> ${rNews.tool}`);
+
+  const rRssAi = classifier.classify("RSS AI");
+  if (rRssAi.tool !== "rss_reader" || rRssAi.arguments.query !== "AI") {
+    throw new Error(`Expected rss_reader with query 'AI', got ${rRssAi.tool}`);
+  }
+  console.log(`  ✔ 'RSS AI' -> ${rRssAi.tool} (query: ${rRssAi.arguments.query})`);
+
+  const rRssUrl = classifier.classify("https://motc-mini-dog.pages.dev/rss");
+  if (rRssUrl.tool !== "rss_reader") throw new Error(`Expected rss_reader for URL, got ${rRssUrl.tool}`);
+  console.log(`  ✔ 'https://motc-mini-dog.pages.dev/rss' -> ${rRssUrl.tool}`);
+
+  const rGithub = classifier.classify("github 黑馬");
+  if (rGithub.tool !== "briefing_github") throw new Error(`Expected briefing_github, got ${rGithub.tool}`);
+  console.log(`  ✔ 'github 黑馬' -> ${rGithub.tool}`);
+
+  const rMcp = classifier.classify("推薦 MCP");
+  if (rMcp.tool !== "briefing_github" || rMcp.arguments.topic !== "mcp") throw new Error(`Expected briefing_github topic mcp, got ${rMcp.tool}`);
+  console.log(`  ✔ '推薦 MCP' -> ${rMcp.tool} (topic: ${rMcp.arguments.topic})`);
+
+  const rAgent = classifier.classify("推薦 agent");
+  if (rAgent.tool !== "briefing_github" || rAgent.arguments.topic !== "ai-agents") throw new Error(`Expected briefing_github topic ai-agents, got ${rAgent.tool}`);
+  console.log(`  ✔ '推薦 agent' -> ${rAgent.tool} (topic: ${rAgent.arguments.topic})`);
+
+  const rDevTools = classifier.classify("推薦 dev tools");
+  if (rDevTools.tool !== "briefing_github" || rDevTools.arguments.topic !== "dev-tools") throw new Error(`Expected briefing_github topic dev-tools, got ${rDevTools.tool}`);
+  console.log(`  ✔ '推薦 dev tools' -> ${rDevTools.tool} (topic: ${rDevTools.arguments.topic})`);
+
+  // FindARepo Client & Flex Card
+  console.log("\n▶ Testing FindARepo Client & Thematic Briefings...");
+  const config = getThematicConfig(5); // Friday
+  const { items } = await fetchFindARepoData(config, 4);
+  if (items.length === 0) throw new Error("FindARepo returned 0 items");
+  console.log(`  ✔ Fetched ${items.length} items for ${config.themeTitle}:`, items.map((i) => i.repo));
+
+  const briefingFlex = createGithubBriefingFlexMessage({
+    dateStr: "2026/09/21",
+    timeStr: "19:00",
+    thematicTitle: `${config.dayName}：${config.themeTitle}`,
+    thematicSubtitle: config.themeSubtitle,
+    tagBadge: config.tagBadge,
+    repos: items.map((i) => ({
+      name: i.repo,
+      url: i.github,
+      description: i.summary,
+      language: i.language || "Multi",
+      stars: i.stars,
+      velocityBadge: formatVelocityBadge(i.starsGained, i.measuredWindowDays),
+      activityBadge: formatActivityBadge(i.activity),
+      license: i.license
+    }))
+  });
+  if (briefingFlex.type !== "flex") throw new Error("Briefing flex message malformed");
+  console.log("  ✔ FindARepo GitHub Briefing Flex Message successfully created!\n");
 
 
   // 3. Declarative Modules
   console.log("▶ Testing Declarative Module System...");
   const modules = getEnabledModules("personal");
-  if (modules.length < 8) throw new Error(`Expected at least 8 personal modules, got ${modules.length}`);
-  console.log(`  ✔ Loaded ${modules.length} active personal modules:`, modules.map((m) => m.name));
+  if (modules.length < 9) throw new Error(`Expected at least 9 personal modules, got ${modules.length}`);
+  const hasRssModule = modules.some((m) => m.id === "rss_reader");
+  if (!hasRssModule) throw new Error("rss_reader module not found in personal modules registry");
+  console.log(`  ✔ Loaded ${modules.length} active personal modules (including rss_reader):`, modules.map((m) => m.name));
   const flex = createFeatureListFlexMessage("personal");
   if (flex.type !== "flex") throw new Error("Feature list flex message malformed");
   console.log("  ✔ Feature list Flex Card successfully built!\n");
@@ -155,6 +219,25 @@ async function main() {
   const twStocks = await fetchTaiwanStockSnapshot();
   if (twStocks.length === 0) throw new Error("Taiwan stocks empty");
   console.log(`  ✔ Taiwan Stocks: ${twStocks.map(s => `${s.name} ${s.price}`).join(", ")}\n`);
+  // 8. MOTC RSS Feed & Intelligence Hub
+  console.log("▶ Testing MOTC RSS Feed & Intelligence Hub (CSV Parser & Flex Message)...");
+  const feed = await getRssFeed({ limit: 5 });
+  if (!feed.success || feed.articles.length === 0) {
+    throw new Error("RSS feed returned 0 articles or failed");
+  }
+  console.log(`  ✔ Successfully fetched and parsed ${feed.articles.length} latest articles (total in feed: ${feed.totalArticles})`);
+  console.log(`  ✔ First Article: [${feed.articles[0].source}] ${feed.articles[0].title} (${feed.articles[0].timeAgo})`);
+
+  // Test keyword search filter
+  const aiFeed = await getRssFeed({ query: "AI", limit: 3 });
+  if (!aiFeed.success) throw new Error("RSS keyword search failed");
+  console.log(`  ✔ Filtered keyword 'AI': ${aiFeed.articles.length} articles matched`);
+
+  // Test Flex Message Generation
+  const rssFlex = createRssFeedFlexMessage(feed);
+  if (rssFlex.type !== "flex") throw new Error("RSS Flex Message malformed");
+  console.log(`  ✔ Generated RSS Feed Flex Card: ${rssFlex.altText}`);
+  console.log(`  ✔ Web App Reader URL points to: ${feed.webUrl}\n`);
   // 7. End-to-End Hono Webhook
   console.log("▶ Testing Hono Webhook End-to-End...");
   const healthRes = await app.request("http://localhost/health", { method: "GET" }, MOCK_ENV);
@@ -191,6 +274,35 @@ async function main() {
   );
   if (strangerRes.status !== 200) throw new Error("Webhook should return 200 OK");
   console.log("  ✔ Unauthorized stranger safely blocked!\n");
+  // Authorized user testing "RSS" command via Webhook
+  const rssPayload = JSON.stringify({
+    destination: "dest",
+    events: [
+      {
+        type: "message",
+        mode: "active",
+        timestamp: Date.now(),
+        source: { type: "user", userId: MOCK_ENV.ALLOWED_USER_ID },
+        replyToken: "mock_reply_token",
+        message: { id: "m_rss", type: "text", text: "RSS" }
+      }
+    ]
+  });
+  const rssSig = await generateSignature(rssPayload, MOCK_ENV.LINE_CHANNEL_SECRET);
+  const rssRes = await app.request(
+    "http://localhost/webhook",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-line-signature": rssSig
+      },
+      body: rssPayload
+    },
+    MOCK_ENV
+  );
+  if (rssRes.status !== 200) throw new Error("RSS Webhook request failed");
+  console.log("  ✔ Authorized user sent 'RSS' command successfully dispatched (200 OK)!\n");
 
   console.log("==========================================");
   console.log("🎉 ALL PERSONAL ASSISTANT TESTS PASSED!");

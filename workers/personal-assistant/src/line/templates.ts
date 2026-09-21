@@ -1,6 +1,7 @@
 import type { OutgoingLineMessage, LineQuickReply } from "../types/line";
 import type { OcrResult } from "../tools/ocrDriveVault";
 import type { PersonalTodoItem } from "../tools/personalTodo";
+import type { RssFeedResult } from "../tools/rssReader";
 
 export const DEFAULT_QUICK_REPLY: LineQuickReply = {
   items: [
@@ -49,6 +50,30 @@ export const DEFAULT_QUICK_REPLY: LineQuickReply = {
         type: "uri",
         label: "📱 開啟Mini App",
         uri: "https://miniapp.line.me/2011472036-bVXeg5I6"
+      }
+    },
+    {
+      type: "action",
+      action: {
+        type: "message",
+        label: "📰 即時情報",
+        text: "RSS"
+      }
+    },
+    {
+      type: "action",
+      action: {
+        type: "message",
+        label: "🚀 開源黑馬",
+        text: "github 黑馬"
+      }
+    },
+    {
+      type: "action",
+      action: {
+        type: "message",
+        label: "🔌 推薦MCP",
+        text: "推薦 MCP"
       }
     }
   ]
@@ -191,6 +216,74 @@ export function createDashboardFlexMessage(): OutgoingLineMessage {
                 contents: [
                   { type: "text", text: "🔔 Discord 監控", weight: "bold", size: "sm", color: "#9D174D" },
                   { type: "text", text: "切換即時告警日誌", size: "xxs", color: "#BE185D", margin: "xs" }
+                ]
+              }
+            ]
+          },
+          // Row 4
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "md",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F0FDF4",
+                paddingAll: "md",
+                cornerRadius: "10px",
+                flex: 1,
+                action: { type: "message", text: "RSS" },
+                contents: [
+                  { type: "text", text: "📰 即時情報站", weight: "bold", size: "sm", color: "#166534" },
+                  { type: "text", text: "多源科技•資安•交通", size: "xxs", color: "#15803D", margin: "xs" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FFFBEB",
+                paddingAll: "md",
+                cornerRadius: "10px",
+                flex: 1,
+                action: { type: "uri", uri: "https://motc-mini-dog.pages.dev/rss" },
+                contents: [
+                  { type: "text", text: "🌐 開啟情報網頁", weight: "bold", size: "sm", color: "#B45309" },
+                  { type: "text", text: "MOTC RSS 閱讀器", size: "xxs", color: "#D97706", margin: "xs" }
+                ]
+              }
+            ]
+          },
+          // Row 5: GitHub & MCP
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "md",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F0FDF4",
+                paddingAll: "md",
+                cornerRadius: "10px",
+                flex: 1,
+                action: { type: "message", text: "github 黑馬" },
+                contents: [
+                  { type: "text", text: "🚀 開源黑馬", weight: "bold", size: "sm", color: "#166534" },
+                  { type: "text", text: "FindARepo 每日精選", size: "xxs", color: "#15803D", margin: "xs" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#EFF6FF",
+                paddingAll: "md",
+                cornerRadius: "10px",
+                flex: 1,
+                action: { type: "message", text: "推薦 MCP" },
+                contents: [
+                  { type: "text", text: "🔌 MCP 精選", weight: "bold", size: "sm", color: "#1E40AF" },
+                  { type: "text", text: "Model Context 協議", size: "xxs", color: "#3B82F6", margin: "xs" }
                 ]
               }
             ]
@@ -348,6 +441,32 @@ export function createPromoProjectsFlexMessage(): OutgoingLineMessage {
                 margin: "xs"
               }
             ]
+          },
+          // Project 4: MOTC RSS Reader
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#F8FAFC",
+            paddingAll: "md",
+            cornerRadius: "8px",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "📰 MOTC 即時情報站", weight: "bold", size: "sm", color: "#1E293B", flex: 3 },
+                  { type: "text", text: "RSS 總匯", size: "xxs", color: "#059669", align: "end", flex: 2, weight: "bold" }
+                ]
+              },
+              {
+                type: "text",
+                text: "MOTC 科資司即時情報站，匯整科技新報、iThome、自由時報、Google 新聞與經理人等多源情報，支援關鍵字檢索與隨開即讀 PWA。",
+                size: "xxs",
+                color: "#475569",
+                wrap: true,
+                margin: "xs"
+              }
+            ]
           }
         ]
       },
@@ -389,6 +508,209 @@ export function createPromoProjectsFlexMessage(): OutgoingLineMessage {
               label: "💬 進入 聯手聊天室",
               uri: "https://toydogcat.github.io/collaborative-chatroom"
             }
+          },
+          {
+            type: "button",
+            style: "primary",
+            color: "#059669",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "📰 瀏覽 MOTC 即時情報站",
+              uri: "https://motc-mini-dog.pages.dev/rss"
+            }
+          }
+        ]
+      }
+    },
+    quickReply: DEFAULT_QUICK_REPLY
+  };
+}
+
+/**
+ * Flex Message Bubble for MOTC RSS Feed & Intelligence Hub.
+ */
+export function createRssFeedFlexMessage(feedResult: RssFeedResult): OutgoingLineMessage {
+  const { articles, totalArticles, filterQuery, filterCategory, webUrl } = feedResult;
+  const filterLabel = filterQuery
+    ? `搜尋：「${filterQuery}」`
+    : filterCategory && filterCategory !== "ALL"
+    ? `主題：${filterCategory}`
+    : "最新焦點";
+
+  const articleBoxes = articles.map((art, idx) => {
+    return {
+      type: "box",
+      layout: "vertical",
+      margin: idx === 0 ? "none" : "md",
+      paddingAll: "sm",
+      backgroundColor: "#F8FAFC",
+      cornerRadius: "8px",
+      action: {
+        type: "uri",
+        label: "閱讀新聞",
+        uri: art.link
+      },
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            {
+              type: "text",
+              text: `${art.sourceIcon} ${art.source}`,
+              size: "xxs",
+              color: art.sourceColor,
+              weight: "bold",
+              flex: 3
+            },
+            {
+              type: "text",
+              text: art.category,
+              size: "xxs",
+              color: "#64748B",
+              align: "center",
+              flex: 3
+            },
+            {
+              type: "text",
+              text: art.timeAgo,
+              size: "xxs",
+              color: "#94A3B8",
+              align: "end",
+              flex: 2
+            }
+          ]
+        },
+        {
+          type: "text",
+          text: art.title,
+          size: "xs",
+          weight: "bold",
+          color: "#1E293B",
+          wrap: true,
+          margin: "xs",
+          maxLines: 2
+        }
+      ]
+    };
+  });
+
+  return {
+    type: "flex",
+    altText: `📰 【MOTC 即時情報站】${articles[0]?.title ? articles[0].title.slice(0, 25) + "..." : "即時新聞情報"}`,
+    contents: {
+      type: "bubble",
+      size: "giga",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#059669",
+        paddingAll: "lg",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              {
+                type: "text",
+                text: "📰 MOTC 即時情報站",
+                weight: "bold",
+                size: "md",
+                color: "#FFFFFF",
+                flex: 4
+              },
+              {
+                type: "text",
+                text: filterLabel,
+                size: "xs",
+                color: "#A7F3D0",
+                align: "end",
+                flex: 3
+              }
+            ]
+          },
+          {
+            type: "text",
+            text: `科技新報 • iThome • 自由時報 • Google新聞 • 經理人 (收錄 ${totalArticles} 篇)`,
+            size: "xxs",
+            color: "#D1FAE5",
+            margin: "xs",
+            wrap: true
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "md",
+        contents: [
+          {
+            type: "text",
+            text: "💡 點擊任一標題可直接開啟閱讀原文：",
+            size: "xxs",
+            color: "#64748B",
+            margin: "none"
+          },
+          ...articleBoxes
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "md",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#059669",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "🌐 開啟完整情報站 (PWA)",
+              uri: webUrl || "https://motc-mini-dog.pages.dev/rss"
+            }
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                flex: 1,
+                action: {
+                  type: "message",
+                  label: "🤖 AI 科技",
+                  text: "RSS AI"
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                flex: 1,
+                action: {
+                  type: "message",
+                  label: "🛡️ 資安情報",
+                  text: "RSS 資安"
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                flex: 1,
+                action: {
+                  type: "message",
+                  label: "🚦 交通道安",
+                  text: "RSS 交通"
+                }
+              }
+            ]
           }
         ]
       }
@@ -1173,64 +1495,251 @@ export function createStockBriefingFlexMessage(info: {
   };
 }
 
+export interface GithubBriefingRepoItem {
+  name: string;
+  url: string;
+  description: string;
+  language: string;
+  stars: number;
+  velocityBadge?: string | null;
+  activityBadge?: string | null;
+  license?: string | null;
+}
+
 export function createGithubBriefingFlexMessage(info: {
   dateStr: string;
   timeStr: string;
-  repos: Array<{ name: string; url: string; description: string; language: string; stars: number }>;
+  thematicTitle?: string;
+  thematicSubtitle?: string;
+  tagBadge?: string;
+  repos: GithubBriefingRepoItem[];
 }): OutgoingLineMessage {
-  const repoBoxes = info.repos.map((r, i) => ({
-    type: "box",
-    layout: "vertical",
-    margin: "md",
-    backgroundColor: "#F8FAFC",
-    cornerRadius: "md",
-    paddingAll: "md",
-    action: {
-      type: "uri",
-      label: r.name,
-      uri: r.url
-    },
-    contents: [
-      {
-        type: "box",
-        layout: "horizontal",
-        contents: [
-          { type: "text", text: `${i + 1}. ${r.name}`, weight: "bold", size: "xs", color: "#0969DA", flex: 4, wrap: true },
-          { type: "text", text: `⭐ ${r.stars.toLocaleString()}`, weight: "bold", size: "xs", color: "#F59E0B", align: "end", flex: 2 }
-        ]
+  const themeTitle = info.thematicTitle || "今日開源熱門黑馬";
+  const themeSubtitle = info.thematicSubtitle || "FindARepo 速度與活躍度每日精選";
+  const tagBadge = info.tagBadge || "🔥 增速黑馬";
+
+  const repoBoxes = info.repos.map((r, i) => {
+    const badges: Array<Record<string, unknown>> = [];
+
+    if (r.velocityBadge) {
+      badges.push({
+        type: "text",
+        text: `📈 ${r.velocityBadge}`,
+        size: "xxs",
+        color: "#16A34A",
+        weight: "bold",
+        margin: "none"
+      });
+    }
+
+    if (r.activityBadge) {
+      badges.push({
+        type: "text",
+        text: r.activityBadge,
+        size: "xxs",
+        color: "#6366F1",
+        weight: "bold",
+        margin: "none"
+      });
+    }
+
+    return {
+      type: "box",
+      layout: "vertical",
+      margin: "md",
+      backgroundColor: "#F8FAFC",
+      cornerRadius: "md",
+      paddingAll: "md",
+      action: {
+        type: "uri",
+        label: r.name,
+        uri: r.url
       },
-      { type: "text", text: r.description, size: "xxs", color: "#475569", wrap: true, margin: "xs" },
-      {
-        type: "box",
-        layout: "horizontal",
-        margin: "xs",
-        contents: [{ type: "text", text: `語言: ${r.language}`, size: "xxs", color: "#64748B" }]
-      }
-    ]
-  }));
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            {
+              type: "text",
+              text: `${i + 1}. ${r.name}`,
+              weight: "bold",
+              size: "xs",
+              color: "#0969DA",
+              flex: 4,
+              wrap: true
+            },
+            {
+              type: "text",
+              text: `⭐ ${r.stars.toLocaleString()}`,
+              weight: "bold",
+              size: "xs",
+              color: "#F59E0B",
+              align: "end",
+              flex: 2
+            }
+          ]
+        },
+        ...(badges.length > 0
+          ? [
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                margin: "xs",
+                contents: badges
+              }
+            ]
+          : []),
+        {
+          type: "text",
+          text: r.description,
+          size: "xxs",
+          color: "#334155",
+          wrap: true,
+          margin: "xs"
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          margin: "xs",
+          contents: [
+            {
+              type: "text",
+              text: `語言: ${r.language || "Multi"}${r.license ? ` · 授權: ${r.license}` : ""}`,
+              size: "xxs",
+              color: "#94A3B8"
+            }
+          ]
+        }
+      ]
+    };
+  });
 
   return {
     type: "flex",
-    altText: `🚀 【GitHub 今日熱點黑馬】${info.dateStr} 19:00 增長最快的開源新星`,
+    altText: `🚀 【GitHub 開源精選】${themeTitle} (${info.dateStr} 19:00)`,
     contents: {
       type: "bubble",
       header: {
         type: "box",
         layout: "vertical",
-        backgroundColor: "#1F2937",
+        backgroundColor: "#0F172A",
         paddingAll: "lg",
         contents: [
-          { type: "text", text: "🚀 GitHub 今日熱門開源黑馬", color: "#FFFFFF", weight: "bold", size: "md" },
-          { type: "text", text: `📅 台灣時間 ${info.dateStr} ${info.timeStr} (點擊可開啟倉庫)`, color: "#E5E7EB", size: "xs", margin: "xs" }
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              {
+                type: "text",
+                text: "🚀 GitHub 開源精選",
+                color: "#FFFFFF",
+                weight: "bold",
+                size: "md",
+                flex: 4
+              },
+              {
+                type: "text",
+                text: tagBadge,
+                color: "#38BDF8",
+                size: "xs",
+                align: "end",
+                weight: "bold",
+                flex: 3
+              }
+            ]
+          },
+          {
+            type: "text",
+            text: `📌 ${themeTitle}`,
+            color: "#F8FAFC",
+            size: "xs",
+            weight: "bold",
+            margin: "xs"
+          },
+          {
+            type: "text",
+            text: `💡 ${themeSubtitle}`,
+            color: "#94A3B8",
+            size: "xxs",
+            margin: "xs",
+            wrap: true
+          }
         ]
       },
       body: {
         type: "box",
         layout: "vertical",
-        paddingAll: "lg",
+        paddingAll: "md",
         contents: [
-          { type: "text", text: "🔥 今日 Star 增長最快的開源新專案：", weight: "bold", size: "xs", color: "#64748B" },
+          {
+            type: "text",
+            text: "點擊任一專案卡片可直接跳轉至 GitHub 倉庫：",
+            size: "xxs",
+            color: "#64748B",
+            margin: "none"
+          },
           ...repoBoxes
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "md",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#2563EB",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "🌐 瀏覽 FindARepo 每日數據榜",
+              uri: "https://findarepo.com/trending/"
+            }
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                flex: 1,
+                action: {
+                  type: "message",
+                  label: "🔌 推薦 MCP",
+                  text: "推薦 MCP"
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                flex: 1,
+                action: {
+                  type: "message",
+                  label: "🤖 AI 代理",
+                  text: "推薦 agent"
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                flex: 1,
+                action: {
+                  type: "message",
+                  label: "🛠️ 開發神器",
+                  text: "推薦 dev tools"
+                }
+              }
+            ]
+          }
         ]
       }
     },

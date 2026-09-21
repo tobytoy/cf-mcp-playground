@@ -1,18 +1,76 @@
 import fs from "fs";
 import path from "path";
 import dns from "node:dns";
+import { fileURLToPath } from "node:url";
 
 dns.setDefaultResultOrder("ipv4first");
 
-const TOKEN = "2QrQh6Mx5FvaQOzIhBsJB3wGZaNkhQUMskf5OKY/hOwXnEJtDPkXi4RbWjIlcGHIBHVHltnXayV1ym7Yb1OCORqtj+k2r4O5GPDmXwFYKhBzPOpx0xt7INqmASNf/pZHNJBu7cGczgQUsAYEXQlXWAdB04t89/1O/w1cDnyilFU=";
-const USER_ID = "Uba361995b7ae8345b4a23e195253d27c";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Reads an environment variable from process.env or falls back to parsing .dev.vars / .env files.
+ */
+function getEnv(key: string): string | undefined {
+  if (process.env[key]) {
+    return process.env[key];
+  }
+
+  const candidatePaths = [
+    path.resolve(__dirname, "../.dev.vars"),
+    path.resolve(__dirname, "../../.dev.vars"),
+    path.resolve(process.cwd(), ".dev.vars"),
+    path.resolve(process.cwd(), "workers/personal-assistant/.dev.vars"),
+    path.resolve(process.cwd(), ".env"),
+    path.resolve(__dirname, "../.env")
+  ];
+
+  for (const filePath of candidatePaths) {
+    if (fs.existsSync(filePath)) {
+      try {
+        const content = fs.readFileSync(filePath, "utf-8");
+        for (const line of content.split("\n")) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith("#")) continue;
+          const eqIdx = trimmed.indexOf("=");
+          if (eqIdx > 0) {
+            const k = trimmed.slice(0, eqIdx).trim();
+            let v = trimmed.slice(eqIdx + 1).trim();
+            if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+              v = v.slice(1, -1);
+            }
+            if (k === key) {
+              return v;
+            }
+          }
+        }
+      } catch {
+        // continue searching
+      }
+    }
+  }
+  return undefined;
+}
 
 async function main() {
   console.log("🚀 Setting up Rich Menu for bfg007 Personal Assistant...");
 
-  const imagePath = path.resolve("workers/personal-assistant/src/assets/richmenu.png");
-  if (!fs.existsSync(imagePath)) {
-    throw new Error(`Image not found at ${imagePath}`);
+  const token = getEnv("LINE_CHANNEL_ACCESS_TOKEN");
+  const userId = getEnv("ALLOWED_USER_ID") || getEnv("LINE_USER_ID");
+
+  if (!token) {
+    throw new Error(
+      "Missing LINE_CHANNEL_ACCESS_TOKEN!\nPlease define LINE_CHANNEL_ACCESS_TOKEN in workers/personal-assistant/.dev.vars or pass it as an environment variable."
+    );
+  }
+
+  const candidateImages = [
+    path.resolve(__dirname, "../src/assets/richmenu.png"),
+    path.resolve(process.cwd(), "workers/personal-assistant/src/assets/richmenu.png"),
+    path.resolve(process.cwd(), "src/assets/richmenu.png")
+  ];
+  const imagePath = candidateImages.find((p) => fs.existsSync(p));
+  if (!imagePath) {
+    throw new Error(`Image not found in candidate paths: ${candidateImages.join(", ")}`);
   }
 
   const richMenuPayload = {
@@ -54,7 +112,7 @@ async function main() {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${TOKEN}`
+      Authorization: `Bearer ${token}`
     },
     body: JSON.stringify(richMenuPayload)
   });
@@ -74,7 +132,7 @@ async function main() {
     method: "POST",
     headers: {
       "Content-Type": "image/png",
-      Authorization: `Bearer ${TOKEN}`
+      Authorization: `Bearer ${token}`
     },
     body: imageBuffer
   });
@@ -89,23 +147,30 @@ async function main() {
   console.log("3. Setting default rich menu for ALL users...");
   const defRes = await fetch(`https://api.line.me/v2/bot/user/all/richmenu/${richMenuId}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${TOKEN}` }
+    headers: { Authorization: `Bearer ${token}` }
   });
   if (!defRes.ok) {
     console.warn("Set all users warning:", await defRes.text());
   }
 
-  // 4. Also explicitly link to owner user
-  console.log(`4. Linking directly to owner user (${USER_ID})...`);
-  const linkRes = await fetch(`https://api.line.me/v2/bot/user/${USER_ID}/richmenu/${richMenuId}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${TOKEN}` }
-  });
-  if (!linkRes.ok) {
-    console.warn("Link user warning:", await linkRes.text());
+  // 4. Also explicitly link to owner user(s) if provided
+  if (userId) {
+    const userIds = userId.split(",").map((s) => s.trim()).filter(Boolean);
+    for (const uid of userIds) {
+      console.log(`4. Linking directly to owner user (${uid})...`);
+      const linkRes = await fetch(`https://api.line.me/v2/bot/user/${uid}/richmenu/${richMenuId}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!linkRes.ok) {
+        console.warn(`Link user (${uid}) warning:`, await linkRes.text());
+      }
+    }
+  } else {
+    console.log("ℹ️ No ALLOWED_USER_ID configured, skipping individual linking.");
   }
 
-  console.log("🎉 Complete! Active Rich Menu is now permanently attached to bfg007!");
+  console.log("🎉 Complete! Active Rich Menu is now attached!");
 }
 
 main().catch(console.error);
