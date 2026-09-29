@@ -8,31 +8,35 @@ import { planContextualRoute } from "./services/context/router.js";
 import { createAuthMiddleware, type UserRole } from "./middlewares/auth.js";
 import { MCP_KNOWLEDGE_BASE, searchTopics } from "./knowledge/mcp-data.js";
 import { buildCacheKey } from "./utils/hash.js";
+import { safeJsonParse } from "./utils/json.js";
+import { createTransportJITEngine } from "./services/jit-transport.js";
+import { MCPAdapter } from "jit-api";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { AppEnv } from "./types/env.js";
 import type { TransportIdentity, TransportState } from "./types/context.js";
-
 export type McpApp = Hono<{ Bindings: AppEnv; Variables: { userRole: UserRole; token?: string } }>;
 
 export function createApp(envBindings?: AppEnv): McpApp {
   // Cache is created once per app instance — no module-level singleton
   const cache = createCacheService(envBindings);
-  const tdxClient = new TDXClient(
-    {
-      clientId: envBindings?.TDX_CLIENT_ID,
-      clientSecret: envBindings?.TDX_CLIENT_SECRET,
-      apiBaseUrl: envBindings?.TDX_BASE_URL,
-    },
-    cache
-  );
-
+  const { engine: jitEngine, mdLoader, tdxClient } = createTransportJITEngine({
+    cacheService: cache,
+    env: envBindings,
+  });
   const app: McpApp = new Hono<{ Bindings: AppEnv; Variables: { userRole: UserRole; token?: string } }>();
 
   // ── CORS Middleware ───────────────────────────────────────────────────────
   app.use(
     "*",
     cors({
-      origin: "*",
+      origin: (origin: string) => {
+        const rawAllowed = typeof envBindings?.ALLOWED_ORIGINS === "string" ? envBindings.ALLOWED_ORIGINS : "*";
+        const allowedOrigins = rawAllowed.split(",").map((o: string) => o.trim());
+        if (allowedOrigins.includes("*") || (origin && allowedOrigins.includes(origin))) {
+          return origin || "*";
+        }
+        return null;
+      },
       allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       allowHeaders: [
         "Content-Type",
@@ -158,33 +162,12 @@ export function createApp(envBindings?: AppEnv): McpApp {
   app.use("/sse", authMiddleware);
   app.use("/message", authMiddleware);
 
-  // ── REST: Transport Context & Route APIs ──────────────────────────────────
+  // ── REST: JIT-Powered Transport Context & Route APIs (0 AI Latency once Frozen) ──
   app.post("/api/transport/context", async (c) => {
     try {
-      const body = await c.req.json<{
-        identity?: TransportIdentity;
-        state?: TransportState;
-        latitude?: number;
-        longitude?: number;
-        location_name?: string;
-        radius_meters?: number;
-      }>();
-
-      const identity = body.identity || "car";
-      const state = body.state || "cruising";
-      const lat = body.latitude ?? 25.033964;
-      const lon = body.longitude ?? 121.564468;
-      const radius = body.radius_meters ?? 800;
-
-      const result = await evaluateTransportContext(
-        tdxClient,
-        identity,
-        state,
-        { latitude: lat, longitude: lon, name: body.location_name },
-        { radiusMeters: radius }
-      );
-
-      return c.json(result);
+      const body = await c.req.json<Record<string, unknown>>();
+      const result = await jitEngine.execute(body, "get_transport_context");
+      return c.json(result.data, 200);
     } catch (err: unknown) {
       return c.json({ error: err instanceof Error ? err.message : "Internal Error" }, 500);
     }
@@ -192,33 +175,31 @@ export function createApp(envBindings?: AppEnv): McpApp {
 
   app.post("/api/transport/route", async (c) => {
     try {
-      const body = await c.req.json<{
-        origin: { latitude: number; longitude: number; name?: string };
-        destination: { latitude: number; longitude: number; name?: string };
-        identity?: TransportIdentity | "multimodal";
-        urgency?: "normal" | "high" | "relaxed";
-        preferences?: any;
-      }>();
-
-      if (!body.origin || !body.destination) {
-        return c.json({ error: "Missing origin or destination coordinates" }, 400);
-      }
-
-      const result = await planContextualRoute(
-        tdxClient,
-        body.origin,
-        body.destination,
-        body.identity || "car",
-        body.urgency || "normal",
-        body.preferences || {}
-      );
-
-      return c.json(result);
+      const body = await c.req.json<Record<string, unknown>>();
+      const result = await jitEngine.execute(body, "plan_contextual_route");
+      return c.json(result.data, 200);
     } catch (err: unknown) {
       return c.json({ error: err instanceof Error ? err.message : "Internal Error" }, 500);
     }
   });
 
+  // Generic JIT API Dispatcher: supports any spec route directly
+  app.post("/api/jit/:route", async (c) => {
+    try {
+      const route = c.req.param("route");
+      const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+      const result = await jitEngine.execute(body, route);
+      return c.json({
+        route,
+        phase: result.context.phase,
+        aiLatencyMs: result.context.aiLatencyMs,
+        engineUsed: result.context.engineUsed,
+        data: result.data,
+      });
+    } catch (err: unknown) {
+      return c.json({ error: err instanceof Error ? err.message : "Internal Error" }, 500);
+    }
+  });
   // ── REST: ask with caching ────────────────────────────────────────────────
   app.post("/api/ask", async (c) => {
     try {
@@ -232,8 +213,8 @@ export function createApp(envBindings?: AppEnv): McpApp {
       const start = Date.now();
 
       const cached = await cache.get(cacheKey);
-      if (cached) {
-        const parsed = JSON.parse(cached) as { originalQuestion: string; answer: string; cachedAt: string };
+      const parsed = safeJsonParse<{ originalQuestion: string; answer: string; cachedAt: string }>(cached);
+      if (parsed) {
         return c.json({
           cached: true,
           responseTimeMs: Date.now() - start,
@@ -273,9 +254,8 @@ export function createApp(envBindings?: AppEnv): McpApp {
     await cache.clear();
     return c.json({ success: true, message: "Cache successfully cleared." });
   });
-
-  // ── MCP protocol handler (stateless per-request transport) ───────────────
-  const handleMcp = async (c: Context) => {
+  // ── Unified MCP Protocol Endpoints (Serving full toolset: 15 Native + JIT Specs) ──
+  const handleUnifiedMcp = async (c: Context) => {
     try {
       const server = createMCPServer({ cacheService: cache, env: c.env as AppEnv });
       const transport = new WebStandardStreamableHTTPServerTransport({
@@ -290,12 +270,19 @@ export function createApp(envBindings?: AppEnv): McpApp {
     }
   };
 
-  app.get("/mcp", handleMcp);
-  app.post("/mcp", handleMcp);
-  app.delete("/mcp", handleMcp);
-  app.get("/sse", handleMcp);
-  app.post("/sse", handleMcp);
-  app.post("/message", handleMcp);
+  app.get("/mcp", handleUnifiedMcp);
+  app.post("/mcp", handleUnifiedMcp);
+  app.delete("/mcp", handleUnifiedMcp);
+  app.get("/sse", handleUnifiedMcp);
+  app.post("/sse", handleUnifiedMcp);
+  app.post("/message", handleUnifiedMcp);
 
+  // JIT MCP Adapter route also mounted under /jit-mcp for dedicated dynamic spec experimentation
+  MCPAdapter.attachToHono(app, jitEngine, mdLoader, {
+    mcpPath: "/jit-mcp",
+    ssePath: "/jit-sse",
+    messagePath: "/jit-message",
+    stageFilter: "prod",
+  });
   return app;
 }

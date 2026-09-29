@@ -5,6 +5,7 @@
 import type { CacheService } from "../cache.js";
 import { TDXAuthService } from "./auth.js";
 import { buildGeoGridKey, calculateDistanceMeters, guessTaiwanCity } from "./geo.js";
+import { safeJsonParse } from "../../utils/json.js";
 import type {
   TDXParkingLot,
   TDXEVChargerStation,
@@ -71,9 +72,8 @@ export class TDXClient {
   async getNearbyParking(lat: number, lon: number, radiusMeters = 800): Promise<TDXParkingLot[]> {
     const cacheKey = buildGeoGridKey("parking", lat, lon);
     const cached = await this.cache.get(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
-    }
+    const parsed = safeJsonParse<TDXParkingLot[]>(cached);
+    if (parsed) return parsed;
 
     let results: TDXParkingLot[] = [];
 
@@ -161,8 +161,8 @@ export class TDXClient {
   async getNearbyEVChargers(lat: number, lon: number, radiusMeters = 1500): Promise<TDXEVChargerStation[]> {
     const cacheKey = buildGeoGridKey("ev_chargers", lat, lon);
     const cached = await this.cache.get(cacheKey);
-    if (cached) return JSON.parse(cached);
-
+    const parsed = safeJsonParse<TDXEVChargerStation[]>(cached);
+    if (parsed) return parsed;
     let results: TDXEVChargerStation[] = [];
 
     if (!this.isMockMode) {
@@ -244,8 +244,8 @@ export class TDXClient {
   async getNearbyYouBike(lat: number, lon: number, radiusMeters = 800): Promise<TDXYouBikeStation[]> {
     const cacheKey = buildGeoGridKey("youbike", lat, lon);
     const cached = await this.cache.get(cacheKey);
-    if (cached) return JSON.parse(cached);
-
+    const parsed = safeJsonParse<TDXYouBikeStation[]>(cached);
+    if (parsed) return parsed;
     let results: TDXYouBikeStation[] = [];
 
     if (!this.isMockMode) {
@@ -314,8 +314,8 @@ export class TDXClient {
   async getTrafficIncidents(city = "Taipei", lat?: number, lon?: number, radiusMeters = 3000): Promise<TDXTrafficIncident[]> {
     const cacheKey = lat && lon ? buildGeoGridKey("incidents", lat, lon, 2) : `tdx:incidents:${city}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) return JSON.parse(cached);
-
+    const parsed = safeJsonParse<TDXTrafficIncident[]>(cached);
+    if (parsed) return parsed;
     let results: TDXTrafficIncident[] = [];
 
     if (!this.isMockMode) {
@@ -379,8 +379,8 @@ export class TDXClient {
   async getBusEstimatedArrival(city = "Taipei", routeName = "307", stopName?: string): Promise<TDXBusArrival[]> {
     const cacheKey = `tdx:bus:${city}:${routeName}:${stopName || "all"}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) return JSON.parse(cached);
-
+    const parsed = safeJsonParse<TDXBusArrival[]>(cached);
+    if (parsed) return parsed;
     let results: TDXBusArrival[] = [];
 
     if (!this.isMockMode) {
@@ -448,8 +448,8 @@ export class TDXClient {
   async getRailLiveBoard(stationId = "1000", railType: "tra" | "thsr" | "metro" = "tra"): Promise<TDXRailLiveBoard[]> {
     const cacheKey = `tdx:rail:${railType}:${stationId}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) return JSON.parse(cached);
-
+    const parsed = safeJsonParse<TDXRailLiveBoard[]>(cached);
+    if (parsed) return parsed;
     let results: TDXRailLiveBoard[] = [];
 
     if (!this.isMockMode) {

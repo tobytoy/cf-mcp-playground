@@ -154,7 +154,10 @@ async function runTests() {
 
   const contextRes = await app.request("/api/transport/context", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer dev_local_secret",
+    },
     body: JSON.stringify({
       identity: "car",
       state: "cruising",
@@ -166,7 +169,10 @@ async function runTests() {
 
   const routeRes = await app.request("/api/transport/route", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer dev_local_secret",
+    },
     body: JSON.stringify({
       origin: { latitude: 25.0136, longitude: 121.5342, name: "公館" },
       destination: { latitude: 25.0339, longitude: 121.5644, name: "台北101" },

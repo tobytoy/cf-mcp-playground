@@ -12,7 +12,7 @@
 
 import type { Context, Next } from "hono";
 import type { AppEnv } from "../types/env.js";
-
+import { safeJsonParse } from "../utils/json.js";
 export type UserRole = "dev" | "vip" | "guest";
 
 export interface RateLimitState {
@@ -21,11 +21,12 @@ export interface RateLimitState {
   dayString: string;
 }
 
-// In-memory fallback for local dev (not shared across instances)
+// In-memory fallback for local dev & Node.js container (with bounded capacity to prevent memory leaks)
+const MAX_MEM_RATELIMIT_ENTRIES = 10_000;
 const memRateLimitStore = new Map<string, RateLimitState>();
-
 function getTodayString(): string {
-  return new Date().toISOString().split("T")[0];
+  // Enforce Asia/Taipei timezone (UTC+8) for local daily quota reset
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date());
 }
 
 async function getRateLimitState(
@@ -37,11 +38,13 @@ async function getRateLimitState(
     try {
       const raw = await kv.get(`rl:${key}`);
       if (raw) {
-        const state: RateLimitState = JSON.parse(raw);
-        if (state.dayString !== today) {
-          return { lastRequestTime: 0, requestCountToday: 0, dayString: today };
+        const state = safeJsonParse<RateLimitState>(raw);
+        if (state) {
+          if (state.dayString !== today) {
+            return { lastRequestTime: 0, requestCountToday: 0, dayString: today };
+          }
+          return state;
         }
-        return state;
       }
     } catch {
       // fall through to memory
@@ -69,6 +72,10 @@ async function setRateLimitState(
     } catch {
       // fall through to memory
     }
+  }
+  if (memRateLimitStore.size >= MAX_MEM_RATELIMIT_ENTRIES) {
+    const oldestKey = memRateLimitStore.keys().next().value;
+    if (oldestKey) memRateLimitStore.delete(oldestKey);
   }
   memRateLimitStore.set(key, state);
 }

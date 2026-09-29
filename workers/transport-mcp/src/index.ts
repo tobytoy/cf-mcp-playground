@@ -1,5 +1,6 @@
 export { createMCPServer } from "./mcp/server.js";
-export { createCacheService, RedisCache, MemoryCache } from "./services/cache.js";
+export { createCacheService, MemoryCache } from "./services/cache.js";
+export { RedisCache } from "./services/cache.redis.js";
 export { createApp } from "./app.js";
 export type { McpApp } from "./app.js";
 export type { AppEnv } from "./types/env.js";

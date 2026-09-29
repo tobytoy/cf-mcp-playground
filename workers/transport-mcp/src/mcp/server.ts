@@ -14,6 +14,7 @@ import { evaluateTransportContext } from "../services/context/evaluator.js";
 import { planContextualRoute } from "../services/context/router.js";
 import { lookupOfficialRailFare } from "../services/tdx/fares.js";
 import { buildCacheKey } from "../utils/hash.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { AppEnv } from "../types/env.js";
 import type { TransportIdentity, TransportState } from "../types/context.js";
 
@@ -366,12 +367,29 @@ function toolError(message: string) {
 
     // 2. plan_contextual_route
     if (name === "plan_contextual_route") {
-      const origin = args.origin as { latitude: number; longitude: number; name?: string };
-      const dest = args.destination as { latitude: number; longitude: number; name?: string };
+      if (!args.origin || typeof args.origin !== "object") {
+        return toolError("缺少起點資訊 (origin)，請提供包含 latitude 與 longitude 的物件。");
+      }
+      if (!args.destination || typeof args.destination !== "object") {
+        return toolError("缺少目的地資訊 (destination)，請提供包含 latitude 與 longitude 的物件。");
+      }
+      const originObj = args.origin as Record<string, unknown>;
+      const destObj = args.destination as Record<string, unknown>;
+      const originLat = Number(originObj.latitude ?? originObj.lat);
+      const originLon = Number(originObj.longitude ?? originObj.lon ?? originObj.lng);
+      const destLat = Number(destObj.latitude ?? destObj.lat);
+      const destLon = Number(destObj.longitude ?? destObj.lon ?? destObj.lng);
+
+      if (isNaN(originLat) || originLat < -90 || originLat > 90) return toolError(`起點緯度不合法：${originObj.latitude}`);
+      if (isNaN(originLon) || originLon < -180 || originLon > 180) return toolError(`起點經度不合法：${originObj.longitude}`);
+      if (isNaN(destLat) || destLat < -90 || destLat > 90) return toolError(`目的地緯度不合法：${destObj.latitude}`);
+      if (isNaN(destLon) || destLon < -180 || destLon > 180) return toolError(`目的地經度不合法：${destObj.longitude}`);
+
+      const origin = { latitude: originLat, longitude: originLon, name: (originObj.name as string) || "出發地" };
+      const dest = { latitude: destLat, longitude: destLon, name: (destObj.name as string) || "目的地" };
       const identity = (args.identity as TransportIdentity | "multimodal") || "car";
       const urgency = (args.urgency as "normal" | "high" | "relaxed") || "normal";
       const preferences = (args.preferences as any) || {};
-
       const result = await planContextualRoute(
         tdxClient,
         origin,
@@ -449,16 +467,19 @@ function toolError(message: string) {
       const topic = (args.topic as string) || "all";
       const topicMap: Record<string, string> = {
         skills: "what-is-mcp-skill",
-        tools: "tools-vs-resources-vs-prompts",
-        resources: "tools-vs-resources-vs-prompts",
-        prompts: "tools-vs-resources-vs-prompts",
+        tools: "what-is-mcp-skill",
+        resources: "what-is-mcp-skill",
+        prompts: "what-is-mcp-skill",
         architecture: "what-is-mcp",
+        deployment: "how-to-use-mcp",
+        caching: "redis-caching-design",
+        best_practices: "mcp-best-practices",
       };
       if (topic !== "all" && topic in topicMap) {
         const t = findTopicById(topicMap[topic]);
         return { content: [{ type: "text", text: t ? `# ${t.title}\n\n${t.content}` : "找不到內容" }] };
       }
-      const fullText = MCP_KNOWLEDGE_BASE.filter((t) => ["what-is-mcp", "what-is-mcp-skill", "tools-vs-resources-vs-prompts"].includes(t.id))
+      const fullText = MCP_KNOWLEDGE_BASE.filter((t) => ["what-is-mcp", "what-is-mcp-skill", "how-to-use-mcp"].includes(t.id))
         .map((t) => `# ${t.title}\n\n${t.content}`)
         .join("\n\n---\n\n");
       return { content: [{ type: "text", text: fullText }] };
@@ -466,7 +487,7 @@ function toolError(message: string) {
 
     if (name === "get_mcp_quickstart") {
       const client = (args.client as string) || "all";
-      const guide = findTopicById("quickstart-guide");
+      const guide = findTopicById("how-to-use-mcp");
       if (!guide) return { isError: true, content: [{ type: "text", text: "快速上手指南暫時不可用。" }] };
       return { content: [{ type: "text", text: `# ${guide.title}\n\n${extractClientSection(guide.content, client)}` }] };
     }
@@ -486,8 +507,8 @@ function toolError(message: string) {
       const cacheKey = buildCacheKey(question);
       const startTime = Date.now();
       const cached = await cache.get(cacheKey);
-      if (cached) {
-        const parsed = JSON.parse(cached);
+      const parsed = safeJsonParse<{ originalQuestion: string; answer: string; cachedAt: string }>(cached);
+      if (parsed) {
         return {
           content: [
             {
@@ -525,6 +546,11 @@ function toolError(message: string) {
     }
 
     if (name === "clear_mcp_cache") {
+      const devKey = options?.env?.DEV_SECRET_KEY || "dev_local_secret";
+      const token = String(args.token || args.auth_key || "");
+      if (token !== devKey) {
+        return toolError("權限不足：清空快取僅限開發者模式 (請於參數提供合法 token)。");
+      }
       await cache.clear();
       return { content: [{ type: "text", text: "✅ 已清空快取！" }] };
     }

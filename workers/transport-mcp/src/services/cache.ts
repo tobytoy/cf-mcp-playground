@@ -1,11 +1,10 @@
-import { Redis } from "ioredis";
 import type { AppEnv } from "../types/env.js";
 
 export interface CacheStats {
   hits: number;
   misses: number;
   keysCount: number;
-  type: "redis" | "memory";
+  type: "redis" | "memory" | "kv";
   connected: boolean;
 }
 
@@ -75,118 +74,6 @@ export class MemoryCache implements CacheService {
   }
 }
 
-export class RedisCache implements CacheService {
-  private client: Redis | null = null;
-  private readonly memoryFallback = new MemoryCache();
-  private isConnected = false;
-  private hits = 0;
-  private misses = 0;
-
-  constructor(redisUrlOrOptions?: string | { host?: string; port?: number; password?: string }) {
-    try {
-      this.client = typeof redisUrlOrOptions === "string"
-        ? new Redis(redisUrlOrOptions, {
-            maxRetriesPerRequest: 2,
-            retryStrategy: (times: number) => (times > 3 ? null : Math.min(times * 100, 1000)),
-            lazyConnect: true,
-          })
-        : new Redis({
-            host: redisUrlOrOptions?.host ?? "127.0.0.1",
-            port: redisUrlOrOptions?.port ?? 6379,
-            password: redisUrlOrOptions?.password,
-            maxRetriesPerRequest: 2,
-            retryStrategy: (times: number) => (times > 3 ? null : Math.min(times * 100, 1000)),
-            lazyConnect: true,
-          });
-
-      this.client.on("connect", () => { this.isConnected = true; });
-      this.client.on("error", (_err: unknown) => { this.isConnected = false; });
-      this.client.on("close", () => { this.isConnected = false; });
-      this.client.connect().catch(() => { this.isConnected = false; });
-    } catch {
-      this.isConnected = false;
-      this.client = null;
-    }
-  }
-
-  async get(key: string): Promise<string | null> {
-    if (this.client && this.isConnected) {
-      try {
-        const val = await this.client.get(key);
-        if (val !== null) { this.hits++; return val; }
-        this.misses++;
-        return null;
-      } catch {
-        return this.memoryFallback.get(key);
-      }
-    }
-    return this.memoryFallback.get(key);
-  }
-
-  async set(key: string, value: string, ttlSeconds = 86400): Promise<void> {
-    if (this.client && this.isConnected) {
-      try {
-        if (ttlSeconds > 0) {
-          await this.client.set(key, value, "EX", ttlSeconds);
-        } else {
-          await this.client.set(key, value);
-        }
-        return;
-      } catch {
-        // fall through to memory fallback
-      }
-    }
-    await this.memoryFallback.set(key, value, ttlSeconds);
-  }
-
-  async delete(key: string): Promise<boolean> {
-    if (this.client && this.isConnected) {
-      try {
-        return (await this.client.del(key)) > 0;
-      } catch {
-        return this.memoryFallback.delete(key);
-      }
-    }
-    return this.memoryFallback.delete(key);
-  }
-
-  async clear(): Promise<void> {
-    if (this.client && this.isConnected) {
-      try {
-        await this.client.flushdb();
-        return;
-      } catch {
-        // fall through
-      }
-    }
-    await this.memoryFallback.clear();
-  }
-
-  async getStats(): Promise<CacheStats> {
-    if (this.client && this.isConnected) {
-      try {
-        return {
-          hits: this.hits,
-          misses: this.misses,
-          keysCount: await this.client.dbsize(),
-          type: "redis",
-          connected: true,
-        };
-      } catch {
-        // fall through
-      }
-    }
-    const mem = await this.memoryFallback.getStats();
-    return {
-      hits: this.hits + mem.hits,
-      misses: this.misses + mem.misses,
-      keysCount: mem.keysCount,
-      type: "memory",
-      connected: this.isConnected,
-    };
-  }
-}
-
 /**
  * KVCache — Cloudflare KV-backed cache (preferred in Workers production).
  * Provides cross-instance, globally replicated caching with TTL support.
@@ -239,8 +126,8 @@ export class KVCache implements CacheService {
     return {
       hits: this.hits,
       misses: this.misses,
-      keysCount: -1, // KV list is expensive; skipped
-      type: "memory" as const, // reuse type; KV not a separate enum value
+      keysCount: -1,
+      type: "kv",
       connected: true,
     };
   }
@@ -258,13 +145,22 @@ export function createCacheService(env?: AppEnv): CacheService {
   const redisUrl = env?.REDIS_URL;
   const redisHost = env?.REDIS_HOST;
 
-  if (redisUrl) return new RedisCache(redisUrl);
-  if (redisHost) {
-    return new RedisCache({
-      host: redisHost,
-      port: env?.REDIS_PORT ? parseInt(env.REDIS_PORT, 10) : undefined,
-      password: env?.REDIS_PASSWORD,
-    });
+  if (redisUrl || redisHost) {
+    try {
+      // Use node require / dynamic loader to avoid Workers bundling of ioredis
+      const redisModule = "./cache.redis.js";
+      const mod = typeof require !== "undefined" ? require(redisModule) : null;
+      if (mod && mod.RedisCache) {
+        if (redisUrl) return new mod.RedisCache(redisUrl);
+        return new mod.RedisCache({
+          host: redisHost,
+          port: env?.REDIS_PORT ? parseInt(env.REDIS_PORT, 10) : undefined,
+          password: env?.REDIS_PASSWORD,
+        });
+      }
+    } catch {
+      // ignore and fallback to MemoryCache
+    }
   }
   return new MemoryCache();
 }
