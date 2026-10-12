@@ -1,0 +1,320 @@
+{
+  "name": "GetTransportContextRequest",
+  "version": 1,
+  "route": "get_transport_context",
+  "fields": {
+    "identity": {
+      "name": "identity",
+      "type": "string",
+      "required": true
+    },
+    "state": {
+      "name": "state",
+      "type": "string",
+      "required": true
+    },
+    "latitude": {
+      "name": "latitude",
+      "type": "number",
+      "required": true
+    },
+    "longitude": {
+      "name": "longitude",
+      "type": "number",
+      "required": true
+    },
+    "location_name": {
+      "name": "location_name",
+      "type": "string",
+      "required": true
+    },
+    "radius_meters": {
+      "name": "radius_meters",
+      "type": "number",
+      "required": true
+    }
+  },
+  "responseFields": {
+    "timestamp": {
+      "name": "timestamp",
+      "type": "string",
+      "required": true
+    },
+    "queryContext": {
+      "name": "queryContext",
+      "type": "object",
+      "required": true,
+      "properties": {
+        "identity": {
+          "name": "identity",
+          "type": "string",
+          "required": true
+        },
+        "state": {
+          "name": "state",
+          "type": "string",
+          "required": true
+        },
+        "location": {
+          "name": "location",
+          "type": "object",
+          "required": true
+        }
+      }
+    },
+    "situation": {
+      "name": "situation",
+      "type": "object",
+      "required": true,
+      "properties": {
+        "level": {
+          "name": "level",
+          "type": "string",
+          "required": true
+        },
+        "headline": {
+          "name": "headline",
+          "type": "string",
+          "required": true
+        },
+        "summary": {
+          "name": "summary",
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    "recommendations": {
+      "name": "recommendations",
+      "type": "array",
+      "required": true,
+      "itemType": "object"
+    },
+    "risks": {
+      "name": "risks",
+      "type": "array",
+      "required": true,
+      "itemType": "object"
+    },
+    "quickMetrics": {
+      "name": "quickMetrics",
+      "type": "object",
+      "required": true,
+      "properties": {
+        "availableParkingSpots": {
+          "name": "availableParkingSpots",
+          "type": "number",
+          "required": true
+        },
+        "nearestAvailableDistanceMeters": {
+          "name": "nearestAvailableDistanceMeters",
+          "type": "number",
+          "required": true
+        },
+        "evFastChargersAvailable": {
+          "name": "evFastChargersAvailable",
+          "type": "number",
+          "required": true
+        },
+        "activeIncidentsCount": {
+          "name": "activeIncidentsCount",
+          "type": "number",
+          "required": true
+        },
+        "trafficCongestionLevel": {
+          "name": "trafficCongestionLevel",
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    "rawDetails": {
+      "name": "rawDetails",
+      "type": "object",
+      "required": true,
+      "properties": {
+        "parking": {
+          "name": "parking",
+          "type": "array",
+          "required": true
+        },
+        "evChargers": {
+          "name": "evChargers",
+          "type": "array",
+          "required": true
+        },
+        "youbike": {
+          "name": "youbike",
+          "type": "array",
+          "required": true
+        },
+        "incidents": {
+          "name": "incidents",
+          "type": "array",
+          "required": true
+        }
+      }
+    }
+  },
+  "samplePayload": {
+    "identity": "ev",
+    "state": "urgent",
+    "latitude": 25.033964,
+    "longitude": 121.564468,
+    "location_name": "台北101",
+    "radius_meters": 800
+  },
+  "sampleResponse": {
+    "timestamp": "2026-10-01T01:50:47.334Z",
+    "queryContext": {
+      "identity": "ev",
+      "state": "urgent",
+      "location": {
+        "latitude": 25.033964,
+        "longitude": 121.564468,
+        "name": "台北101"
+      }
+    },
+    "situation": {
+      "level": "normal",
+      "headline": "趕時間模式 — 最近可用車位推薦",
+      "summary": "周邊無重大交通事故，各運具運行正常。"
+    },
+    "recommendations": [
+      {
+        "priority": 1,
+        "type": "urgent_parking",
+        "title": "建議停靠【府前廣場地下停車場】避開排隊",
+        "detail": "最近場已接近滿位，建議直行 200m 至【府前廣場地下停車場】（剩 142 格）。"
+      },
+      {
+        "priority": 2,
+        "type": "ev_charger",
+        "title": "⚡ 快充充電站：【特爾電力 台北旗艦快充站】",
+        "detail": "距離 348m，可用快充 2 槍 / 慢充 0 槍，支援 CCS1, CCS2。"
+      }
+    ],
+    "risks": [
+      {
+        "category": "traffic_incident",
+        "severity": "medium",
+        "description": "[開發環境模擬] 外側車道施工，單線通行。",
+        "impactMinutes": 8
+      }
+    ],
+    "quickMetrics": {
+      "availableParkingSpots": 172,
+      "nearestAvailableDistanceMeters": 98,
+      "evFastChargersAvailable": 2,
+      "activeIncidentsCount": 1,
+      "trafficCongestionLevel": "moderate"
+    },
+    "rawDetails": {
+      "parking": [
+        {
+          "ParkingLotID": "PK-003",
+          "ParkingLotName": "百貨商場本館地下停車場",
+          "TotalSpaces": 200,
+          "AvailableSpaces": 2,
+          "EVSpaces": 8,
+          "AvailableEVSpaces": 0,
+          "HourlyRate": 80,
+          "FareDescription": "80元/小時，消費滿千折抵一小時",
+          "DistanceMeters": 98,
+          "Position": {
+            "PositionLat": 25.034464,
+            "PositionLon": 121.563668
+          },
+          "IsFull": true
+        },
+        {
+          "ParkingLotID": "PK-002",
+          "ParkingLotName": "信義國小地下停車場",
+          "TotalSpaces": 180,
+          "AvailableSpaces": 28,
+          "EVSpaces": 6,
+          "AvailableEVSpaces": 1,
+          "HourlyRate": 30,
+          "FareDescription": "30元/小時，夜間 10元/小時",
+          "DistanceMeters": 195,
+          "Position": {
+            "PositionLat": 25.032464,
+            "PositionLon": 121.563468
+          },
+          "IsFull": false
+        },
+        {
+          "ParkingLotID": "PK-001",
+          "ParkingLotName": "府前廣場地下停車場",
+          "TotalSpaces": 350,
+          "AvailableSpaces": 142,
+          "EVSpaces": 12,
+          "AvailableEVSpaces": 4,
+          "HourlyRate": 40,
+          "FareDescription": "40元/小時，前30分鐘免費",
+          "DistanceMeters": 300,
+          "Position": {
+            "PositionLat": 25.035964,
+            "PositionLon": 121.566468
+          },
+          "IsFull": false
+        }
+      ],
+      "evChargers": [
+        {
+          "StationID": "EV-002",
+          "StationName": "EVALUE 交流充電站",
+          "Address": "地下停車場 B2",
+          "DistanceMeters": 262,
+          "Position": {
+            "PositionLat": 25.035464,
+            "PositionLon": 121.56246800000001
+          },
+          "TotalGuns": 8,
+          "AvailableGuns": 5,
+          "FastChargerAvailable": 0,
+          "SlowChargerAvailable": 5,
+          "SupportedPlugs": [
+            "Type2",
+            "J1772"
+          ],
+          "Operator": "EVALUE"
+        },
+        {
+          "StationID": "EV-001",
+          "StationName": "特爾電力 台北旗艦快充站",
+          "Address": "台北市信義區松智路與松壽路口",
+          "DistanceMeters": 348,
+          "Position": {
+            "PositionLat": 25.036964,
+            "PositionLon": 121.56546800000001
+          },
+          "TotalGuns": 6,
+          "AvailableGuns": 2,
+          "FastChargerAvailable": 2,
+          "SlowChargerAvailable": 0,
+          "SupportedPlugs": [
+            "CCS1",
+            "CCS2"
+          ],
+          "Operator": "Tail Electric"
+        }
+      ],
+      "youbike": [],
+      "incidents": [
+        {
+          "IncidentID": "MOCK-INC-001",
+          "Title": "[示範] 周邊道路施工管制",
+          "Description": "[開發環境模擬] 外側車道施工，單線通行。",
+          "LocationDescription": "示範路段 (開發環境)",
+          "Severity": "medium",
+          "IncidentType": "construction",
+          "StartTime": "2026-10-01T01:50:47.334Z",
+          "EndTime": "2026-10-01T02:50:47.334Z",
+          "DistanceMeters": 650
+        }
+      ]
+    }
+  },
+  "frozenAt": "2026-10-01T01:50:47.362Z"
+}
