@@ -15,7 +15,7 @@ import type {
   TDXRailLiveBoard,
 } from "../../types/tdx.js";
 
-const DEFAULT_API_BASE = "https://tdx.transportdata.gov.tw/api/basic";
+const DEFAULT_API_BASE = "https://tdx.transportdata.tw/api/basic";
 
 export interface TDXClientConfig {
   apiBaseUrl?: string;
@@ -523,3 +523,4 @@ export class TDXClient {
     return results;
   }
 }
+

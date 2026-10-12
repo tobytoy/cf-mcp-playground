@@ -6,7 +6,7 @@ import type { CacheService } from "../cache.js";
 import type { TDXTokenResponse } from "../../types/tdx.js";
 
 const DEFAULT_AUTH_URL =
-  "https://tdx.transportdata.gov.tw/auth/realms/TDXConnect/protocol/openid-connect/token";
+  "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token";
 const TOKEN_CACHE_KEY = "tdx:auth:access_token";
 
 export interface TDXAuthConfig {

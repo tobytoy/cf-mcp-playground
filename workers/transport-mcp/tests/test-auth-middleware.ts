@@ -108,6 +108,34 @@ async function runAuthTests() {
     console.log("  ✅ PASS: /api/auth/status endpoint verified\n");
   }
 
+  // ── Test 5: X-Forwarded-For Multi-IP Spoofing Defense ──────────────────────
+  console.log("▶ [Test 5] Testing X-Forwarded-For Multi-IP Spoofing Defense...");
+  const ipSpoof1 = await app.request("/api/transport/context", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Forwarded-For": "198.51.100.42, 10.0.0.1",
+    },
+    body: JSON.stringify({ identity: "car", state: "cruising", latitude: 25.0, longitude: 121.5 }),
+  });
+  console.log(`  - 1st Request (198.51.100.42, proxy1) Status: ${ipSpoof1.status}`);
+
+  const ipSpoof2 = await app.request("/api/transport/context", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Forwarded-For": "198.51.100.42, 192.168.1.100", // different internal proxy suffix
+    },
+    body: JSON.stringify({ identity: "car", state: "cruising", latitude: 25.0, longitude: 121.5 }),
+  });
+  console.log(`  - 2nd Request with same client IP (198.51.100.42, proxy2) Status: ${ipSpoof2.status} (Expected: 429)`);
+
+  if (ipSpoof1.status === 200 && ipSpoof2.status === 429) {
+    console.log("  ✅ PASS: Multi-IP spoofing defense verified (outermost IP correctly isolated)\n");
+  } else {
+    throw new Error("Multi-IP spoofing defense test failed!");
+  }
+
   console.log("=======================================================");
   console.log("🎉 ALL AUTH & RATE LIMIT TESTS PASSED!");
   console.log("=======================================================\n");

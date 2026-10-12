@@ -1,4 +1,10 @@
-import { JITEngine, MDLoader, type RouteDefinition } from "jit-api";
+import {
+  JITEngine,
+  MDLoader,
+  createPrometheusPlugin,
+  createSafetyGuardPlugin,
+  type RouteDefinition,
+} from "jit-api/edge";
 import { INLINE_TRANSPORT_SPECS } from "../specs.inline.js";
 import { TDXClient } from "./tdx/client.js";
 import { evaluateTransportContext } from "./context/evaluator.js";
@@ -8,11 +14,14 @@ import { safeJsonParse } from "../utils/json.js";
 import type { AppEnv } from "../types/env.js";
 import type { TransportIdentity, TransportState } from "../types/context.js";
 
+export type PrometheusPluginInstance = ReturnType<typeof createPrometheusPlugin>;
+
 export interface TransportJITServices {
   engine: JITEngine;
   mdLoader: MDLoader;
   tdxClient: TDXClient;
   cacheService: CacheService;
+  prometheusPlugin: PrometheusPluginInstance;
 }
 
 export function createTransportJITEngine(options?: {
@@ -36,6 +45,16 @@ export function createTransportJITEngine(options?: {
     confidenceThreshold: 0.8,
     driftMode: "evolve",
   });
+
+  // ── Observability & Safety Plugins (jit-api v1.4.3+) ──────────────────────
+  const prometheusPlugin = createPrometheusPlugin({ prefix: "transport_mcp" });
+  engine.usePlugin(prometheusPlugin);
+
+  const safetyGuardPlugin = createSafetyGuardPlugin({
+    blockInjections: true,
+    autoSanitizePII: true,
+  });
+  engine.usePlugin(safetyGuardPlugin);
 
   // Load markdown specs (schema definitions)
   mdLoader.loadAll(engine);
@@ -138,5 +157,5 @@ export function createTransportJITEngine(options?: {
     },
   });
 
-  return { engine, mdLoader, tdxClient, cacheService };
+  return { engine, mdLoader, tdxClient, cacheService, prometheusPlugin };
 }

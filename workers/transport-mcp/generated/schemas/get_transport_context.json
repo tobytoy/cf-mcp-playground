@@ -165,7 +165,7 @@
     "radius_meters": 800
   },
   "sampleResponse": {
-    "timestamp": "2026-09-29T07:06:13.736Z",
+    "timestamp": "2026-10-08T08:13:05.331Z",
     "queryContext": {
       "identity": "ev",
       "state": "urgent",
@@ -309,12 +309,12 @@
           "LocationDescription": "示範路段 (開發環境)",
           "Severity": "medium",
           "IncidentType": "construction",
-          "StartTime": "2026-09-29T07:06:13.736Z",
-          "EndTime": "2026-09-29T08:06:13.736Z",
+          "StartTime": "2026-10-08T08:13:05.332Z",
+          "EndTime": "2026-10-08T09:13:05.332Z",
           "DistanceMeters": 650
         }
       ]
     }
   },
-  "frozenAt": "2026-09-29T07:06:13.754Z"
+  "frozenAt": "2026-10-08T08:13:05.354Z"
 }

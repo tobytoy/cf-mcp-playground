@@ -127,10 +127,11 @@ export function createAuthMiddleware(fallbackEnv?: AppEnv) {
     // Rate Limiting Check (KV-backed for cross-instance consistency)
     const now = Date.now();
     const today = getTodayString();
-    const clientIP =
+    const rawForwarded =
       c.req.header("CF-Connecting-IP") ||
       c.req.header("X-Forwarded-For") ||
       "anonymous_client";
+    const clientIP = rawForwarded.split(",")[0].trim() || "anonymous_client";
 
     const rateLimitKey = role === "guest" ? `guest:${clientIP}` : `${role}:${token}`;
     const kv = c.env?.CACHE_KV as KVNamespace | undefined;

@@ -53,10 +53,10 @@ User wants to plan a route or journey between origin and destination with traffi
 ## Fields
 - origin_latitude: number (出發地緯度)
 - origin_longitude: number (出發地經度)
-- origin_name: string (出發地地標名稱)
+- origin_name: string (出發地地標名稱，選填)
 - destination_latitude: number (目的地緯度)
 - destination_longitude: number (目的地經度)
-- destination_name: string (目的地地標名稱)
+- destination_name: string (目的地地標名稱，選填)
 - identity: enum (交通工具類別)
   - car: 汽車
   - ev: 電動車
@@ -100,8 +100,8 @@ User wants to check train timetable, departures, schedule or arrivals for railwa
   - thsr: 台灣高鐵 THSR
   - metro: 捷運 Metro
 - station_name: string (車站名稱，例如 '台北', '南港', '左營')
-- destination_name: string (目的地車站名稱)
-- top: number (回傳筆數上限)
+- destination_name: string (目的地車站名稱，選填)
+- top: number (回傳筆數上限，選填)
 
 ## Sample
 - Semantic: 幫我查一下台鐵台北車站今天往花蓮的發車時刻表

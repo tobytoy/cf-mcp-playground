@@ -10,7 +10,7 @@ import { MCP_KNOWLEDGE_BASE, searchTopics } from "./knowledge/mcp-data.js";
 import { buildCacheKey } from "./utils/hash.js";
 import { safeJsonParse } from "./utils/json.js";
 import { createTransportJITEngine } from "./services/jit-transport.js";
-import { MCPAdapter } from "jit-api";
+import { MCPAdapter } from "jit-api/edge";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { AppEnv } from "./types/env.js";
 import type { TransportIdentity, TransportState } from "./types/context.js";
@@ -19,7 +19,7 @@ export type McpApp = Hono<{ Bindings: AppEnv; Variables: { userRole: UserRole; t
 export function createApp(envBindings?: AppEnv): McpApp {
   // Cache is created once per app instance — no module-level singleton
   const cache = createCacheService(envBindings);
-  const { engine: jitEngine, mdLoader, tdxClient } = createTransportJITEngine({
+  const { engine: jitEngine, mdLoader, tdxClient, prometheusPlugin } = createTransportJITEngine({
     cacheService: cache,
     env: envBindings,
   });
@@ -64,8 +64,9 @@ export function createApp(envBindings?: AppEnv): McpApp {
     c.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   });
 
-  // ── Status dashboard (Public) ─────────────────────────────────────────────
-  app.get("/", async (c) => {
+
+  // ── Status dashboard / API Info (Public) ──────────────────────────────────
+  app.get("/api/info", async (c) => {
     const stats = await cache.getStats();
     return c.json({
       service: "Cloudflare Worker Context-Aware Transportation MCP Service",
@@ -80,6 +81,8 @@ export function createApp(envBindings?: AppEnv): McpApp {
       endpoints: {
         mcp: "/mcp (Streamable HTTP / SSE MCP Protocol Endpoint)",
         sse: "/sse (SSE Transport Endpoint)",
+        jitMcp: "/jit-mcp (JIT-Powered MCP Protocol Endpoint - Protected)",
+        metrics: "/metrics (Prometheus OpenMetrics P50/P90/P99 latency & phase counters)",
         transportContextApi: "POST /api/transport/context",
         transportRouteApi: "POST /api/transport/route",
         authStatusApi: "GET /api/auth/status",
@@ -110,9 +113,19 @@ export function createApp(envBindings?: AppEnv): McpApp {
     });
   });
 
+  // 首頁導向 MCP API 資訊
+  app.get("/", (c) => c.redirect("/api/info"));
   app.get("/health", async (c) => {
     const stats = await cache.getStats();
     return c.json({ status: "healthy", timestamp: new Date().toISOString(), cache: stats });
+  });
+
+  // ── Observability: Prometheus Metrics Endpoint (jit-api v1.4.3+) ──────────
+  app.get("/metrics", async (c) => {
+    const text = prometheusPlugin?.getMetricsAsText() || "";
+    return c.text(text, 200, {
+      "Content-Type": "text/plain; version=0.0.4; charset=utf-8",
+    });
   });
 
   // ── Auth Status Endpoint ──────────────────────────────────────────────────
@@ -169,7 +182,9 @@ export function createApp(envBindings?: AppEnv): McpApp {
       const result = await jitEngine.execute(body, "get_transport_context");
       return c.json(result.data, 200);
     } catch (err: unknown) {
-      return c.json({ error: err instanceof Error ? err.message : "Internal Error" }, 500);
+      const message = err instanceof Error ? err.message : "Internal Error";
+      const isSecurityBlocked = message.includes("AI Safety Guardrail") || message.includes("Prompt Injection");
+      return c.json({ error: message }, isSecurityBlocked ? 400 : 500);
     }
   });
 
@@ -179,7 +194,9 @@ export function createApp(envBindings?: AppEnv): McpApp {
       const result = await jitEngine.execute(body, "plan_contextual_route");
       return c.json(result.data, 200);
     } catch (err: unknown) {
-      return c.json({ error: err instanceof Error ? err.message : "Internal Error" }, 500);
+      const message = err instanceof Error ? err.message : "Internal Error";
+      const isSecurityBlocked = message.includes("AI Safety Guardrail") || message.includes("Prompt Injection");
+      return c.json({ error: message }, isSecurityBlocked ? 400 : 500);
     }
   });
 
@@ -197,7 +214,9 @@ export function createApp(envBindings?: AppEnv): McpApp {
         data: result.data,
       });
     } catch (err: unknown) {
-      return c.json({ error: err instanceof Error ? err.message : "Internal Error" }, 500);
+      const message = err instanceof Error ? err.message : "Internal Error";
+      const isSecurityBlocked = message.includes("AI Safety Guardrail") || message.includes("Prompt Injection");
+      return c.json({ error: message }, isSecurityBlocked ? 400 : 500);
     }
   });
   // ── REST: ask with caching ────────────────────────────────────────────────
@@ -283,6 +302,7 @@ export function createApp(envBindings?: AppEnv): McpApp {
     ssePath: "/jit-sse",
     messagePath: "/jit-message",
     stageFilter: "prod",
+    authMiddleware,
   });
   return app;
 }
