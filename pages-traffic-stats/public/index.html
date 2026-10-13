@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>台灣交通安全重點指標開放資料集 (107-114年) | 毒駕・未滿18歲無照・兒童事故死傷統計</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+    }
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* 自訂滾動條 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+  </style>
+</head>
+<body class="bg-[#070b14] text-slate-100 min-h-screen selection:bg-rose-500 selection:text-white antialiased">
+
+  <!-- 背景動態光暈裝飾 -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+    <div class="absolute -top-40 -left-40 w-[32rem] h-[32rem] bg-rose-600/10 rounded-full blur-[120px]"></div>
+    <div class="absolute top-1/4 -right-40 w-[36rem] h-[36rem] bg-blue-600/10 rounded-full blur-[140px]"></div>
+    <div class="absolute bottom-10 left-1/4 w-[30rem] h-[30rem] bg-amber-500/10 rounded-full blur-[120px]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:32px_32px] opacity-20"></div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+    
+    <!-- Header 頂部導航與主標題 -->
+    <header class="text-center mb-12 sm:mb-16">
+      <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-xs font-medium text-rose-400 mb-5 shadow-lg shadow-rose-950/20 backdrop-blur-md">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+        </span>
+        <span class="tracking-wide text-slate-300">內政部警政署 政府資料開放平臺 (data.gov.tw) 官方逐案微資料重構</span>
+        <span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px] font-bold">107-114年 (連續8年)</span>
+      </div>
+
+      <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white mb-5 leading-tight sm:leading-tight">
+        台灣交通安全重點指標<span class="bg-gradient-to-r from-rose-400 via-amber-300 to-blue-400 bg-clip-text text-transparent">開放資料集</span>
+      </h1>
+      
+      <p class="text-slate-300 text-sm sm:text-base max-w-3xl mx-auto leading-relaxed mb-8">
+        彙整 <span class="text-white font-semibold underline decoration-rose-500/50 underline-offset-4">民國 107 年至 114 年（連續 8 年）</span> 道路交通事故逐案細部微資料，聚焦於
+        <span class="inline-block px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-300 font-semibold border border-rose-500/30">毒駕事故</span>、
+        <span class="inline-block px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 font-semibold border border-amber-500/30">未滿18歲無照駕駛</span> 與 
+        <span class="inline-block px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-300 font-semibold border border-blue-500/30">兒童用路死傷 (0-12歲)</span> 之全國鄉鎮市區多維度統計與清洗去雜訊。
+      </p>
+
+      <!-- 主要按鈕列 (CTA) -->
+      <div class="flex flex-wrap items-center justify-center gap-3.5 sm:gap-4">
+        <a href="/traffic_safety_stats_107_114.csv" download="交通安全重點指標統計_107-114年.csv" class="group px-6 py-3.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 hover:from-rose-600 hover:to-amber-600 active:scale-95 text-white font-bold text-sm sm:text-base shadow-lg shadow-rose-500/25 transition-all duration-200 flex items-center gap-2.5">
+          <i class="fa-solid fa-cloud-arrow-down text-lg group-hover:-translate-y-0.5 transition-transform"></i>
+          <span>下載去識別化彙整資料 (CSV ~4.7MB)</span>
+        </a>
+        <a href="#schema" class="px-5 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white text-sm font-semibold transition flex items-center gap-2 backdrop-blur-md">
+          <i class="fa-solid fa-table-list text-sky-400"></i>
+          <span>資料表欄位規格</span>
+        </a>
+        <a href="#python-guide" class="px-5 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white text-sm font-semibold transition flex items-center gap-2 backdrop-blur-md">
+          <i class="fa-brands fa-python text-emerald-400"></i>
+          <span>Python 繪圖範例</span>
+        </a>
+        <a href="#metadata" class="px-5 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white text-sm font-semibold transition flex items-center gap-2 backdrop-blur-md">
+          <i class="fa-solid fa-database text-amber-400"></i>
+          <span>來源資料集代碼</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- 核心數據總覽 KPI 卡片區 (獨立 Grid 容器) -->
+    <section class="mb-14">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+          <i class="fa-solid fa-chart-pie text-rose-400"></i>
+          <span>8 年核心數據重點總覽 (2018 - 2025)</span>
+        </h2>
+        <span class="text-xs text-slate-500">全國鄉鎮市區彙總</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- KPI 1: 毒駕 -->
+        <div class="group bg-slate-900/70 border border-rose-500/20 hover:border-rose-500/50 rounded-2xl p-6 shadow-xl relative overflow-hidden backdrop-blur-xl transition-all duration-300 hover:-translate-y-1">
+          <div class="absolute -right-3 -bottom-3 text-rose-500/10 group-hover:text-rose-500/20 text-7xl font-bold transition-all duration-300 pointer-events-none">
+            <i class="fa-solid fa-capsules"></i>
+          </div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-500/15 text-rose-400 text-xs font-semibold border border-rose-500/25">
+              <i class="fa-solid fa-triangle-exclamation"></i> 毒駕事故（吸食違禁物）
+            </span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold">114年暴增</span>
+          </div>
+          <div class="text-3xl sm:text-4xl font-black text-white mb-2 tracking-tight">
+            651 <span class="text-sm font-normal text-slate-400">人次涉案</span>
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            114年達 <strong class="text-rose-300">273 人次</strong>（因應喪屍煙彈 / 依托咪酯專案查緝與定義標準化呈現顯著攀升，年增 +217%）。
+          </p>
+        </div>
+
+        <!-- KPI 2: 未滿18歲無照 -->
+        <div class="group bg-slate-900/70 border border-amber-500/20 hover:border-amber-500/50 rounded-2xl p-6 shadow-xl relative overflow-hidden backdrop-blur-xl transition-all duration-300 hover:-translate-y-1">
+          <div class="absolute -right-3 -bottom-3 text-amber-500/10 group-hover:text-amber-500/20 text-7xl font-bold transition-all duration-300 pointer-events-none">
+            <i class="fa-solid fa-id-card-clip"></i>
+          </div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 text-amber-400 text-xs font-semibold border border-amber-500/25">
+              <i class="fa-solid fa-motorcycle"></i> 未滿18歲無照駕駛(駕駛人)
+            </span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">8年降幅 -42.5%</span>
+          </div>
+          <div class="text-3xl sm:text-4xl font-black text-white mb-2 tracking-tight">
+            32,775 <span class="text-sm font-normal text-slate-400">人次涉案</span>
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            由 107 年 4,314 人降至 114 年 <strong class="text-amber-300">2,479 人</strong>。已嚴格限縮為未成年主駕駛本人（排除同乘乘客與行人）。
+          </p>
+        </div>
+
+        <!-- KPI 3: 兒童事故死傷 -->
+        <div class="group bg-slate-900/70 border border-blue-500/20 hover:border-blue-500/50 rounded-2xl p-6 shadow-xl relative overflow-hidden backdrop-blur-xl transition-all duration-300 hover:-translate-y-1">
+          <div class="absolute -right-3 -bottom-3 text-blue-500/10 group-hover:text-blue-500/20 text-7xl font-bold transition-all duration-300 pointer-events-none">
+            <i class="fa-solid fa-child-reaching"></i>
+          </div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/15 text-blue-400 text-xs font-semibold border border-blue-500/25">
+              <i class="fa-solid fa-shield-heart"></i> 兒童事故死傷 (0-12歲)
+            </span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-bold">清洗真0歲</span>
+          </div>
+          <div class="text-3xl sm:text-4xl font-black text-white mb-2 tracking-tight">
+            92,119 <span class="text-sm font-normal text-slate-400">人次死傷</span>
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            已精確剔除原始資料中將撞樹、動物、障礙物預設填為「0歲」之大量雜訊，如實呈現 0-6 歲幼兒與 7-12 歲學童死傷。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 歷年趨勢圖表卡片 (獨立寬幅容器) -->
+    <section class="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-6 sm:p-8 mb-14 shadow-2xl backdrop-blur-xl">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-800">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
+            <i class="fa-solid fa-chart-line text-rose-500 text-lg"></i>
+            <span>8 年重點歷史統計趨勢概況 (民國 107 ~ 114 年)</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">
+            資料來源自警政署歷年 A1 (24小時內死亡) 與 A2 (人員受傷) 逐案資料彙整
+          </p>
+        </div>
+
+        <!-- 圖表互動視角切換器 -->
+        <div class="flex flex-wrap items-center gap-2 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 text-xs">
+          <span class="text-slate-500 px-2 font-medium hidden sm:inline">視角切換:</span>
+          <button onclick="switchChartMode('all')" id="chartBtn-all" class="px-3 py-1.5 rounded-lg font-semibold bg-rose-600 text-white transition-all shadow">
+            綜合對比 (雙軸)
+          </button>
+          <button onclick="switchChartMode('drug')" id="chartBtn-drug" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all">
+            毒駕事故 (單獨)
+          </button>
+          <button onclick="switchChartMode('underage')" id="chartBtn-underage" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all">
+            未成年無照 (單獨)
+          </button>
+          <button onclick="switchChartMode('children')" id="chartBtn-children" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all">
+            兒童死傷 (單獨)
+          </button>
+        </div>
+      </div>
+
+      <!-- 圖表畫布容器 (自適應高度與寬度) -->
+      <div class="relative w-full h-72 sm:h-96">
+        <canvas id="trendChart"></canvas>
+      </div>
+
+      <!-- 圖表註解說明 -->
+      <div class="mt-6 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
+        <div class="flex items-center gap-4">
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500"></span> 兒童死傷：對應左側軸（單位：人）</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500"></span> 未成年無照 / <span class="w-3 h-3 rounded-full bg-rose-500"></span> 毒駕：對應右側軸（單位：人）</span>
+        </div>
+        <div class="text-slate-500">
+          <i class="fa-solid fa-circle-info mr-1"></i> 點選圖例可自訂隱藏/顯示單一指標
+        </div>
+      </div>
+    </section>
+
+    <!-- 資料集規格與欄位定義 (Schema) -->
+    <section id="schema" class="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-6 sm:p-8 mb-14 shadow-2xl backdrop-blur-xl">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-800">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
+            <i class="fa-solid fa-table text-sky-400 text-lg"></i>
+            <span>資料集欄位字典與結構規格 (Data Dictionary)</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">
+            CSV 檔案共 11 個欄位，UTF-8 編碼含 BOM，已完成鄉鎮市區標準化與事故類別標註
+          </p>
+        </div>
+        <span class="text-xs px-3 py-1 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20 font-mono font-medium">
+          traffic_safety_stats_107_114.csv
+        </span>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-slate-800">
+        <table class="w-full text-left text-xs sm:text-sm border-collapse">
+          <thead>
+            <tr class="bg-slate-950/90 text-slate-300 border-b border-slate-800">
+              <th class="py-3 px-4 font-semibold">欄位名稱</th>
+              <th class="py-3 px-3 font-semibold">型態</th>
+              <th class="py-3 px-4 font-semibold">範例值</th>
+              <th class="py-3 px-4 font-semibold">欄位說明與定義</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60 font-mono text-xs">
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-3 px-4 font-bold text-rose-300">年度(民國)</td>
+              <td class="py-3 px-3 text-slate-400">String</td>
+              <td class="py-3 px-4 text-emerald-300">114年</td>
+              <td class="py-3 px-4 font-sans text-slate-300">民國事故年度 (107年 ~ 114年)</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-3 px-4 font-bold text-rose-300">西元年</td>
+              <td class="py-3 px-3 text-slate-400">Integer</td>
+              <td class="py-3 px-4 text-emerald-300">2025</td>
+              <td class="py-3 px-4 font-sans text-slate-300">西元事故年份 (2018 ~ 2025)，方便直接 groupby 聚合</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-3 px-4 font-bold text-sky-300">縣市</td>
+              <td class="py-3 px-3 text-slate-400">String</td>
+              <td class="py-3 px-4 text-emerald-300">新北市</td>
+              <td class="py-3 px-4 font-sans text-slate-300">全國 22 縣市（經發生地點正規化校正）</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-3 px-4 font-bold text-sky-300">行政區</td>
+              <td class="py-3 px-3 text-slate-400">String</td>
+              <td class="py-3 px-4 text-emerald-300">三重區</td>
+              <td class="py-3 px-4 font-sans text-slate-300">鄉鎮市區（如大安區、埔里鎮等）</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-3 px-4 font-bold text-amber-300">違規/事故類別</td>
+              <td class="py-3 px-3 text-slate-400">String</td>
+              <td class="py-3 px-4 text-amber-200">毒駕事故(吸食違禁物)</td>
+              <td class="py-3 px-4 font-sans text-slate-300">共3類：毒駕事故 / 未滿18歲無照駕駛 / 兒童交通事故死傷</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-3 px-4 font-bold text-slate-300">統計對象年齡層</td>
+              <td class="py-3 px-3 text-slate-400">String</td>
+              <td class="py-3 px-4 text-emerald-300">幼兒(0-6歲)</td>
+              <td class="py-3 px-4 font-sans text-slate-300">幼兒(0-6歲)、國小學童(7-12歲)、少年(13-17歲)、全齡毒駕</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-3 px-4 font-bold text-slate-300">發生月份</td>
+              <td class="py-3 px-3 text-slate-400">String</td>
+              <td class="py-3 px-4 text-emerald-300">01月</td>
+              <td class="py-3 px-4 font-sans text-slate-300">事故發生月份 (01月 ~ 12月)</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-3 px-4 font-bold text-purple-300">涉案人數</td>
+              <td class="py-3 px-3 text-slate-400">Integer</td>
+              <td class="py-3 px-4 text-emerald-300">3</td>
+              <td class="py-3 px-4 font-sans text-slate-300">涉及該違規或指標之當事者人數</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-3 px-4 font-bold text-rose-400">死亡人數</td>
+              <td class="py-3 px-3 text-slate-400">Integer</td>
+              <td class="py-3 px-4 text-emerald-300">0</td>
+              <td class="py-3 px-4 font-sans text-slate-300">A1 類事故 24 小時內死亡人數</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-3 px-4 font-bold text-blue-400">受傷人數</td>
+              <td class="py-3 px-3 text-slate-400">Integer</td>
+              <td class="py-3 px-4 text-emerald-300">2</td>
+              <td class="py-3 px-4 font-sans text-slate-300">A2 類事故受傷人數（含重傷與輕傷）</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-3 px-4 font-bold text-white">死傷總人數</td>
+              <td class="py-3 px-3 text-slate-400">Integer</td>
+              <td class="py-3 px-4 text-emerald-300">2</td>
+              <td class="py-3 px-4 font-sans text-slate-300">死亡人數 + 受傷人數 合計總數</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 重要口徑與統計備註 (重要使用須知) -->
+      <div class="mt-6 p-4 sm:p-5 bg-slate-950/80 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-2.5">
+        <div class="flex items-center gap-2 text-amber-400 font-bold text-sm">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>資料集統計口徑與分析使用須知 (Usage Notes)</span>
+        </div>
+        <ul class="space-y-1.5 list-disc list-inside text-slate-400 leading-relaxed">
+          <li>
+            <strong class="text-slate-200">涉案人數與死傷總人數關係：</strong>
+            本資料集來源為警政署開放之「傷亡事故逐案微資料 (A1 死亡 / A2 受傷)」，不含僅車損之 A3 事故。因原始微資料僅標註案件層級（A1 或 A2），彙整時將 A1 事故當事人計入死亡、A2 事故當事人計入受傷，故各列中「涉案人數」與「死傷總人數」數值呈 1:1 對應，代表該維度條件下涉及傷亡事故之總人次。
+          </li>
+          <li>
+            <strong class="text-slate-200">毒駕事故統計涵蓋範圍：</strong>
+            「毒駕事故 (吸食違禁物)」係比對事故主要肇因或個別肇因判定包含吸毒之案件。統計對象包含該起毒駕事故中被列入微資料之全體當事關係人（包含肇事駕駛、同車乘員與被撞波及之其他車輛/被害人）。資料集中若出現少數「未成年」年齡層，多為該起毒駕事故所波及之無辜受害者。
+          </li>
+          <li>
+            <strong class="text-slate-200">未滿 18 歲無照駕駛判定：</strong>
+            已嚴格限縮為當事者順位第 1 順位（主要主駕駛人本人），且限定為動力汽機車，已排除同乘少年、乘客或路過行人。
+          </li>
+          <li>
+            <strong class="text-slate-200">行政區解析涵蓋率：</strong>
+            全表 47,946 筆中，47,945 筆（99.998%）已完全校正對齊台灣法定 368 鄉鎮市區標準；僅 1 筆（114 年 3 月彰化縣）因原始報案地點字串不詳標註為「全區/未明」。
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 資料來源與組合流程說明 (分區卡片) -->
+    <div id="metadata" class="space-y-12 mb-14">
+      
+      <!-- 原始 Open Data 資料來源清單 -->
+      <section class="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-800">
+          <div>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
+              <i class="fa-solid fa-database text-amber-500 text-lg"></i>
+              <span>原始 Open Data 資料來源清單</span>
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">
+              由政府資料開放平臺 (data.gov.tw) 內政部警政署「傷亡道路交通事故資料逐案細部資料集」自動提取
+            </p>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-medium">
+            全年度逐案微資料 (A1 + A2)
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-xs font-mono">
+          <a href="https://data.gov.tw/dataset/158862" target="_blank" rel="noopener noreferrer" class="group p-3.5 bg-slate-950/70 rounded-xl border border-slate-800/80 hover:border-amber-500/50 hover:bg-slate-900 transition flex items-center justify-between">
+            <div>
+              <div class="font-bold text-slate-200 group-hover:text-amber-300 transition">107年度 (2018)</div>
+              <div class="text-[10px] text-slate-500">代碼 158862</div>
+            </div>
+            <i class="fa-solid fa-arrow-up-right-from-square text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition"></i>
+          </a>
+          <a href="https://data.gov.tw/dataset/158863" target="_blank" rel="noopener noreferrer" class="group p-3.5 bg-slate-950/70 rounded-xl border border-slate-800/80 hover:border-amber-500/50 hover:bg-slate-900 transition flex items-center justify-between">
+            <div>
+              <div class="font-bold text-slate-200 group-hover:text-amber-300 transition">108年度 (2019)</div>
+              <div class="text-[10px] text-slate-500">代碼 158863</div>
+            </div>
+            <i class="fa-solid fa-arrow-up-right-from-square text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition"></i>
+          </a>
+          <a href="https://data.gov.tw/dataset/158864" target="_blank" rel="noopener noreferrer" class="group p-3.5 bg-slate-950/70 rounded-xl border border-slate-800/80 hover:border-amber-500/50 hover:bg-slate-900 transition flex items-center justify-between">
+            <div>
+              <div class="font-bold text-slate-200 group-hover:text-amber-300 transition">109年度 (2020)</div>
+              <div class="text-[10px] text-slate-500">代碼 158864</div>
+            </div>
+            <i class="fa-solid fa-arrow-up-right-from-square text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition"></i>
+          </a>
+          <a href="https://data.gov.tw/dataset/158865" target="_blank" rel="noopener noreferrer" class="group p-3.5 bg-slate-950/70 rounded-xl border border-slate-800/80 hover:border-amber-500/50 hover:bg-slate-900 transition flex items-center justify-between">
+            <div>
+              <div class="font-bold text-slate-200 group-hover:text-amber-300 transition">110年度 (2021)</div>
+              <div class="text-[10px] text-slate-500">代碼 158865</div>
+            </div>
+            <i class="fa-solid fa-arrow-up-right-from-square text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition"></i>
+          </a>
+          <a href="https://data.gov.tw/dataset/161199" target="_blank" rel="noopener noreferrer" class="group p-3.5 bg-slate-950/70 rounded-xl border border-slate-800/80 hover:border-amber-500/50 hover:bg-slate-900 transition flex items-center justify-between">
+            <div>
+              <div class="font-bold text-slate-200 group-hover:text-amber-300 transition">111年度 (2022)</div>
+              <div class="text-[10px] text-slate-500">代碼 161199</div>
+            </div>
+            <i class="fa-solid fa-arrow-up-right-from-square text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition"></i>
+          </a>
+          <a href="https://data.gov.tw/dataset/167905" target="_blank" rel="noopener noreferrer" class="group p-3.5 bg-slate-950/70 rounded-xl border border-slate-800/80 hover:border-amber-500/50 hover:bg-slate-900 transition flex items-center justify-between">
+            <div>
+              <div class="font-bold text-slate-200 group-hover:text-amber-300 transition">112年度 (2023)</div>
+              <div class="text-[10px] text-slate-500">代碼 167905</div>
+            </div>
+            <i class="fa-solid fa-arrow-up-right-from-square text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition"></i>
+          </a>
+          <a href="https://data.gov.tw/dataset/172969" target="_blank" rel="noopener noreferrer" class="group p-3.5 bg-slate-950/70 rounded-xl border border-slate-800/80 hover:border-amber-500/50 hover:bg-slate-900 transition flex items-center justify-between">
+            <div>
+              <div class="font-bold text-slate-200 group-hover:text-amber-300 transition">113年度 (2024)</div>
+              <div class="text-[10px] text-slate-500">代碼 172969</div>
+            </div>
+            <i class="fa-solid fa-arrow-up-right-from-square text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition"></i>
+          </a>
+          <a href="https://data.gov.tw/dataset/177136" target="_blank" rel="noopener noreferrer" class="group p-3.5 bg-slate-950/70 rounded-xl border border-slate-800/80 hover:border-amber-500/50 hover:bg-slate-900 transition flex items-center justify-between">
+            <div>
+              <div class="font-bold text-slate-200 group-hover:text-amber-300 transition">114年度 (2025)</div>
+              <div class="text-[10px] text-slate-500">代碼 177136</div>
+            </div>
+            <i class="fa-solid fa-arrow-up-right-from-square text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition"></i>
+          </a>
+        </div>
+      </section>
+
+      <!-- 欄位篩選與組合邏輯 (2x2 格狀排版，寬裕舒適) -->
+      <section class="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
+            <i class="fa-solid fa-filter-circle-dollar text-blue-400 text-lg"></i>
+            <span>去識別化資料篩選與組合邏輯 (Processing Pipeline)</span>
+          </h2>
+          <span class="text-xs text-slate-400 font-mono">ETL & Data Cleaning</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- 規則 1 -->
+          <div class="p-5 bg-slate-950/70 rounded-xl border border-slate-800/80 hover:border-rose-500/40 transition">
+            <div class="flex items-center gap-2 mb-2.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+              <h3 class="font-bold text-white text-base">1. 毒駕事故判定邏輯</h3>
+            </div>
+            <p class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-3">
+              比對事故微資料之「<code class="text-rose-300 font-mono bg-rose-950/40 px-1 py-0.5 rounded">肇因研判子類別名稱-主要</code>」與「<code class="text-rose-300 font-mono bg-rose-950/40 px-1 py-0.5 rounded">肇因研判子類別名稱-個別</code>」，嚴格比對包含關鍵字 <span class="text-white font-medium bg-slate-800 px-1.5 py-0.5 rounded">吸食違禁物駕駛</span> 或 <span class="text-white font-medium bg-slate-800 px-1.5 py-0.5 rounded">吸毒</span> 之當事者個案。
+            </p>
+            <div class="text-[11px] text-rose-400/90 bg-rose-950/20 border border-rose-900/30 p-2 rounded-lg">
+              <i class="fa-solid fa-circle-exclamation mr-1"></i> 統計對象包含該起毒駕事故中被列入微資料之全體當事者（含主肇事者與受波及之其他關係人/被害者）。
+            </div>
+          </div>
+
+          <!-- 規則 2 -->
+          <div class="p-5 bg-slate-950/70 rounded-xl border border-slate-800/80 hover:border-amber-500/40 transition">
+            <div class="flex items-center gap-2 mb-2.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              <h3 class="font-bold text-white text-base">2. 未滿 18 歲無照駕駛事故判定</h3>
+            </div>
+            <p class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-3">
+              篩選「<code class="text-amber-300 font-mono bg-amber-950/40 px-1 py-0.5 rounded">當事者年齡 < 18</code>」且「<code class="text-amber-300 font-mono bg-amber-950/40 px-1 py-0.5 rounded">當事者順位 = 1</code>」(主駕駛人)。精確排除行人與非動力慢車，限定為動力汽機車（普通重機、微電車、大客貨車等）。
+            </p>
+            <div class="text-[11px] text-amber-400/90 bg-amber-950/20 border border-amber-900/30 p-2 rounded-lg">
+              <i class="fa-solid fa-circle-check mr-1"></i> 排除被載乘客與路過未成年行人，鎖定真實無照主駕行為。
+            </div>
+          </div>
+
+          <!-- 規則 3 -->
+          <div class="p-5 bg-slate-950/70 rounded-xl border border-slate-800/80 hover:border-blue-500/40 transition">
+            <div class="flex items-center gap-2 mb-2.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+              <h3 class="font-bold text-white text-base">3. 兒童死傷判定與「假 0 歲」清洗</h3>
+            </div>
+            <p class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-3">
+              原始資料中常將撞擊「路樹、動物、障礙物」或肇逃者預設填為 <code class="text-rose-300 font-mono bg-slate-900 px-1 py-0.5 rounded">0</code>。本版本進行關鍵清洗：<strong class="text-white">嚴格排除性別為「無或物」、「動物」之非自然人紀錄</strong>，保留真實的 0-6 歲幼童與 7-12 歲學童死傷。
+            </p>
+            <div class="text-[11px] text-blue-400/90 bg-blue-950/20 border border-blue-900/30 p-2 rounded-lg">
+              <i class="fa-solid fa-circle-info mr-1"></i> 死傷總人數為 A1 死亡 (24h內) 與 A2 受傷（含重輕傷）總合。
+            </div>
+          </div>
+
+          <!-- 規則 4 -->
+          <div class="p-5 bg-slate-950/70 rounded-xl border border-slate-800/80 hover:border-emerald-500/40 transition">
+            <div class="flex items-center gap-2 mb-2.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              <h3 class="font-bold text-white text-base">4. 縣市與行政區正規化</h3>
+            </div>
+            <p class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-3">
+              從「發生地點」精確萃取行政區（如臺北市大安區、南投縣埔里鎮等），若地點字串未完整標註，則以「處理單位名稱警局層」自動補全縣市歸屬，確保全國 22 縣市跨年度統計口徑完全對齊。
+            </p>
+            <div class="text-[11px] text-emerald-400/90 bg-emerald-950/20 border border-emerald-900/30 p-2 rounded-lg">
+              <i class="fa-solid fa-code-compare mr-1"></i> 補齊歷年「台」與「臺」同義字對應，統一為標準地名。
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Python Pandas 快速上手與繪圖範例 (教學專區) -->
+    <section id="python-guide" class="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-6 sm:p-8 shadow-2xl mb-14 backdrop-blur-xl">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-800">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
+            <i class="fa-brands fa-python text-emerald-400 text-2xl"></i>
+            <span>Python Pandas 快速分析與繪圖範例 (新手友善)</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">
+            提供開箱即用的範例程式碼，直接複製貼到 Jupyter Notebook 或 Google Colab 即可一秒載入雲端資料繪圖！
+          </p>
+        </div>
+        <span class="text-xs px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold flex items-center gap-1.5">
+          <i class="fa-solid fa-bolt"></i> 複製即用
+        </span>
+      </div>
+
+      <!-- 頁籤/按鈕切換 -->
+      <div class="flex flex-wrap gap-2.5 mb-5">
+        <button onclick="showCodeTab('load')" id="tabBtn-load" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 text-white transition-all shadow-md">
+          1. 雲端一鍵載入與檢視
+        </button>
+        <button onclick="showCodeTab('trend')" id="tabBtn-trend" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:text-white transition-all">
+          2. 雙軸歷年趨勢折線圖
+        </button>
+        <button onclick="showCodeTab('top10')" id="tabBtn-top10" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:text-white transition-all">
+          3. 各縣市無照事故 Top 10 長條圖
+        </button>
+        <button onclick="showCodeTab('pivot')" id="tabBtn-pivot" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:text-white transition-all">
+          4. 毒駕近年暴增樞紐交叉分析
+        </button>
+      </div>
+
+      <!-- 程式碼展示區 -->
+      <div class="relative bg-slate-950/90 rounded-2xl border border-slate-800 p-5 sm:p-6 font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto shadow-inner">
+        <!-- 複製按鈕 -->
+        <button onclick="copyCode()" class="absolute top-4 right-4 px-3 py-2 rounded-lg bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-slate-200 text-xs flex items-center gap-2 transition-all border border-slate-700/60 shadow">
+          <i id="copyBtnIcon" class="fa-regular fa-copy"></i>
+          <span id="copyBtnText">複製代碼</span>
+        </button>
+
+        <!-- Tab 1 -->
+        <pre id="code-load" class="leading-relaxed"><code class="block whitespace-pre"><span class="text-slate-500"># 步驟 1: 匯入 Pandas 並直接從本站雲端讀取 CSV 資料</span>
+<span class="text-purple-400">import</span> pandas <span class="text-purple-400">as</span> pd
+
+<span class="text-slate-500"># 無需預先下載檔案，直接指定 Cloudflare Pages URL 即可秒級載入！</span>
+url = <span class="text-emerald-300">"https://traffic-safety-opendata.pages.dev/traffic_safety_stats_107_114.csv"</span>
+df = pd.read_csv(url)
+
+<span class="text-blue-400">print</span>(<span class="text-amber-300">f"資料載入成功！總筆數: {len(df):,} 筆"</span>)
+<span class="text-blue-400">print</span>(df.head())
+
+<span class="text-slate-500"># 查看欄位型別與基本資訊</span>
+df.info()</code></pre>
+
+        <!-- Tab 2 -->
+        <pre id="code-trend" class="hidden leading-relaxed"><code class="block whitespace-pre"><span class="text-slate-500"># 步驟 2: 繪製 2018-2025 歷年重點指標趨勢 (雙 Y 軸折線圖)</span>
+<span class="text-purple-400">import</span> pandas <span class="text-purple-400">as</span> pd
+<span class="text-purple-400">import</span> matplotlib.pyplot <span class="text-purple-400">as</span> plt
+
+<span class="text-slate-500"># 設定中文字型 (依作業系統相容常用中文字體)</span>
+plt.rcParams[<span class="text-emerald-300">'font.sans-serif'</span>] = [<span class="text-emerald-300">'Microsoft JhengHei'</span>, <span class="text-emerald-300">'PingFang TC'</span>, <span class="text-emerald-300">'sans-serif'</span>]
+plt.rcParams[<span class="text-emerald-300">'axes.unicode_minus'</span>] = <span class="text-purple-400">False</span>
+
+df = pd.read_csv(<span class="text-emerald-300">"https://traffic-safety-opendata.pages.dev/traffic_safety_stats_107_114.csv"</span>)
+trend = df.groupby([<span class="text-emerald-300">'西元年'</span>, <span class="text-emerald-300">'違規/事故類別'</span>])[<span class="text-emerald-300">'死傷總人數'</span>].sum().unstack()
+
+fig, ax1 = plt.subplots(figsize=(<span class="text-amber-300">10</span>, <span class="text-amber-300">5.5</span>))
+
+<span class="text-slate-500"># 左軸：兒童死傷 (萬級數量)</span>
+l1 = ax1.plot(trend.index, trend[<span class="text-emerald-300">'兒童交通事故死傷(0-12歲)'</span>], marker=<span class="text-emerald-300">'o'</span>, color=<span class="text-emerald-300">'#2563eb'</span>, label=<span class="text-emerald-300">'兒童死傷 (0-12歲)'</span>, linewidth=<span class="text-amber-300">2.5</span>)
+ax1.set_ylabel(<span class="text-emerald-300">'兒童死傷人數 (人)'</span>, color=<span class="text-emerald-300">'#2563eb'</span>)
+
+<span class="text-slate-500"># 右軸：無照駕駛與毒駕 (百/千級數量)</span>
+ax2 = ax1.twinx()
+l2 = ax2.plot(trend.index, trend[<span class="text-emerald-300">'未滿18歲無照駕駛(駕駛人)'</span>], marker=<span class="text-emerald-300">'s'</span>, color=<span class="text-emerald-300">'#d97706'</span>, label=<span class="text-emerald-300">'未滿18歲無照駕駛'</span>, linewidth=<span class="text-amber-300">2.5</span>)
+l3 = ax2.plot(trend.index, trend[<span class="text-emerald-300">'毒駕事故(吸食違禁物)'</span>], marker=<span class="text-emerald-300">'^'</span>, color=<span class="text-emerald-300">'#dc2626'</span>, label=<span class="text-emerald-300">'毒駕事故'</span>, linewidth=<span class="text-amber-300">2.5</span>)
+ax2.set_ylabel(<span class="text-emerald-300">'無照 / 毒駕 人數 (人)'</span>, color=<span class="text-emerald-300">'#dc2626'</span>)
+
+ax1.legend(l1 + l2 + l3, [l.get_label() <span class="text-purple-400">for</span> l <span class="text-purple-400">in</span> l1 + l2 + l3], loc=<span class="text-emerald-300">'center left'</span>)
+plt.title(<span class="text-emerald-300">'2018-2025 台灣交通安全重點指標歷年趨勢'</span>)
+plt.grid(<span class="text-purple-400">True</span>, linestyle=<span class="text-emerald-300">'--'</span>, alpha=<span class="text-amber-300">0.5</span>)
+plt.tight_layout()
+plt.show()</code></pre>
+
+        <!-- Tab 3 -->
+        <pre id="code-top10" class="hidden leading-relaxed"><code class="block whitespace-pre"><span class="text-slate-500"># 步驟 3: 繪製 2025 (114年) 各縣市未滿 18 歲無照駕駛事故 Top 10 (水平長條圖)</span>
+<span class="text-purple-400">import</span> pandas <span class="text-purple-400">as</span> pd
+<span class="text-purple-400">import</span> matplotlib.pyplot <span class="text-purple-400">as</span> plt
+
+plt.rcParams[<span class="text-emerald-300">'font.sans-serif'</span>] = [<span class="text-emerald-300">'Microsoft JhengHei'</span>, <span class="text-emerald-300">'PingFang TC'</span>, <span class="text-emerald-300">'sans-serif'</span>]
+plt.rcParams[<span class="text-emerald-300">'axes.unicode_minus'</span>] = <span class="text-purple-400">False</span>
+df = pd.read_csv(<span class="text-emerald-300">"https://traffic-safety-opendata.pages.dev/traffic_safety_stats_107_114.csv"</span>)
+
+<span class="text-slate-500"># 篩選 2025 年無照駕駛個案並按縣市加總涉案人數</span>
+df_2025 = df[(df[<span class="text-emerald-300">'西元年'</span>] == <span class="text-amber-300">2025</span>) & (df[<span class="text-emerald-300">'違規/事故類別'</span>] == <span class="text-emerald-300">'未滿18歲無照駕駛(駕駛人)'</span>)]
+top10 = df_2025.groupby(<span class="text-emerald-300">'縣市'</span>)[<span class="text-emerald-300">'涉案人數'</span>].sum().sort_values().tail(<span class="text-amber-300">10</span>)
+
+plt.figure(figsize=(<span class="text-amber-300">9</span>, <span class="text-amber-300">5.5</span>))
+bars = plt.barh(top10.index, top10.values, color=<span class="text-emerald-300">'#0284c7'</span>)
+plt.title(<span class="text-emerald-300">'2025年 各縣市未滿 18 歲無照駕駛事故人數 Top 10'</span>)
+plt.xlabel(<span class="text-emerald-300">'涉案人數 (人)'</span>)
+
+<span class="text-purple-400">for</span> bar <span class="text-purple-400">in</span> bars:
+    w = bar.get_width()
+    plt.text(w + <span class="text-amber-300">3</span>, bar.get_y() + bar.get_height()/<span class="text-amber-300">2</span>, <span class="text-amber-300">f'{int(w):,} 人'</span>, va=<span class="text-emerald-300">'center'</span>, fontsize=<span class="text-amber-300">9</span>)
+
+plt.tight_layout()
+plt.show()</code></pre>
+
+        <!-- Tab 4 -->
+        <pre id="code-pivot" class="hidden leading-relaxed"><code class="block whitespace-pre"><span class="text-slate-500"># 步驟 4: 使用 Pivot Table 樞紐分析毒駕近年暴增的縣市熱區</span>
+<span class="text-purple-400">import</span> pandas <span class="text-purple-400">as</span> pd
+
+df = pd.read_csv(<span class="text-emerald-300">"https://traffic-safety-opendata.pages.dev/traffic_safety_stats_107_114.csv"</span>)
+
+<span class="text-slate-500"># 交叉分析: 列為縣市、欄為年份</span>
+df_drug = df[df[<span class="text-emerald-300">'違規/事故類別'</span>] == <span class="text-emerald-300">'毒駕事故(吸食違禁物)'</span>]
+pivot_drug = df_drug.pivot_table(index=<span class="text-emerald-300">'縣市'</span>, columns=<span class="text-emerald-300">'西元年'</span>, values=<span class="text-emerald-300">'涉案人數'</span>, aggfunc=<span class="text-emerald-300">'sum'</span>, fill_value=<span class="text-amber-300">0</span>)
+
+<span class="text-slate-500"># 按 2025 年涉案人數排序，檢視前 5 大暴增縣市</span>
+top5_counties = pivot_drug.sort_values(by=<span class="text-amber-300">2025</span>, ascending=<span class="text-purple-400">False</span>).head(<span class="text-amber-300">5</span>)
+<span class="text-blue-400">print</span>(<span class="text-emerald-300">"=== 毒駕近年暴增主要縣市 (近四年) ==="</span>)
+<span class="text-blue-400">print</span>(top5_counties[[<span class="text-amber-300">2022</span>, <span class="text-amber-300">2023</span>, <span class="text-amber-300">2024</span>, <span class="text-amber-300">2025</span>]])</code></pre>
+      </div>
+    </section>
+
+    <!-- 底部版權宣告與標籤 -->
+    <footer class="text-center text-xs text-slate-500 py-10 border-t border-slate-800/80">
+      <div class="flex flex-wrap items-center justify-center gap-4 mb-3 text-slate-400">
+        <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-calendar-check text-rose-400"></i> 資料涵蓋：民國 107 ~ 114 年</span>
+        <span class="text-slate-700">•</span>
+        <span class="inline-flex items-center gap-1.5"><i class="fa-brands fa-cloudflare text-amber-400"></i> Cloudflare Pages 邊緣加速託管</span>
+        <span class="text-slate-700">•</span>
+        <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-scale-balanced text-sky-400"></i> 政府資料開放授權條款 - 第 1 版</span>
+      </div>
+      <p class="text-slate-600">本站為去識別化統計微資料加值整理，原始資料權利歸屬於內政部警政署所有</p>
+    </footer>
+
+  </div>
+
+  <script>
+    // 歷年趨勢圖表數據定義
+    const years = ['107年 (2018)', '108年 (2019)', '109年 (2020)', '110年 (2021)', '111年 (2022)', '112年 (2023)', '113年 (2024)', '114年 (2025)'];
+    const childrenData = [9840, 10667, 11031, 9534, 10145, 12950, 13610, 14342];
+    const underageData = [4314, 4584, 4841, 4279, 4606, 4407, 3265, 2479];
+    const drugData = [80, 46, 58, 45, 36, 27, 86, 273];
+
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    let trendChartInstance = null;
+
+    function renderChart(mode = 'all') {
+      if (trendChartInstance) {
+        trendChartInstance.destroy();
+      }
+
+      let datasets = [];
+      let scales = {
+        x: {
+          grid: { color: 'rgba(30, 41, 59, 0.6)' },
+          ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 11 } }
+        }
+      };
+
+      if (mode === 'all') {
+        // 綜合雙軸模式
+        datasets = [
+          {
+            label: '兒童事故死傷 (0-12歲)',
+            data: childrenData,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.12)',
+            yAxisID: 'yLeft',
+            tension: 0.35,
+            fill: true,
+            pointBackgroundColor: '#3b82f6',
+            pointRadius: 4,
+            pointHoverRadius: 7
+          },
+          {
+            label: '未滿18歲無照駕駛(駕駛人)',
+            data: underageData,
+            borderColor: '#f59e0b',
+            backgroundColor: 'transparent',
+            yAxisID: 'yRight',
+            tension: 0.35,
+            borderWidth: 2.5,
+            pointBackgroundColor: '#f59e0b',
+            pointRadius: 4,
+            pointHoverRadius: 7
+          },
+          {
+            label: '毒駕事故 (吸食違禁物)',
+            data: drugData,
+            borderColor: '#f43f5e',
+            backgroundColor: 'transparent',
+            yAxisID: 'yRight',
+            tension: 0.35,
+            borderWidth: 3,
+            pointBackgroundColor: '#f43f5e',
+            pointRadius: 5,
+            pointHoverRadius: 8
+          }
+        ];
+
+        scales.yLeft = {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          title: { display: true, text: '兒童死傷人數 (人)', color: '#3b82f6', font: { size: 12, weight: '600' } },
+          grid: { color: 'rgba(30, 41, 59, 0.6)' },
+          ticks: { color: '#64748b', callback: v => v.toLocaleString() }
+        };
+
+        scales.yRight = {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          title: { display: true, text: '無照 / 毒駕 人數 (人)', color: '#f43f5e', font: { size: 12, weight: '600' } },
+          grid: { drawOnChartArea: false },
+          ticks: { color: '#f59e0b', callback: v => v.toLocaleString() }
+        };
+
+      } else if (mode === 'drug') {
+        // 單獨毒駕模式
+        datasets = [{
+          label: '毒駕事故 (吸食違禁物) 涉案人數',
+          data: drugData,
+          borderColor: '#f43f5e',
+          backgroundColor: 'rgba(244, 63, 94, 0.2)',
+          tension: 0.35,
+          fill: true,
+          borderWidth: 3.5,
+          pointBackgroundColor: '#f43f5e',
+          pointRadius: 6,
+          pointHoverRadius: 9
+        }];
+        scales.y = {
+          type: 'linear',
+          display: true,
+          title: { display: true, text: '毒駕涉案人數 (人)', color: '#f43f5e', font: { size: 12, weight: '600' } },
+          grid: { color: 'rgba(30, 41, 59, 0.6)' },
+          ticks: { color: '#f43f5e', callback: v => v + ' 人' }
+        };
+
+      } else if (mode === 'underage') {
+        // 單獨未成年無照模式
+        datasets = [{
+          label: '未滿18歲無照駕駛(主駕駛人) 涉案人數',
+          data: underageData,
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.15)',
+          tension: 0.35,
+          fill: true,
+          borderWidth: 3,
+          pointBackgroundColor: '#f59e0b',
+          pointRadius: 5,
+          pointHoverRadius: 8
+        }];
+        scales.y = {
+          type: 'linear',
+          display: true,
+          title: { display: true, text: '未滿18歲無照駕駛人數 (人)', color: '#f59e0b', font: { size: 12, weight: '600' } },
+          grid: { color: 'rgba(30, 41, 59, 0.6)' },
+          ticks: { color: '#f59e0b', callback: v => v.toLocaleString() + ' 人' }
+        };
+
+      } else if (mode === 'children') {
+        // 單獨兒童死傷模式
+        datasets = [{
+          label: '兒童交通事故死傷 (0-12歲) 人數',
+          data: childrenData,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.18)',
+          tension: 0.35,
+          fill: true,
+          borderWidth: 3,
+          pointBackgroundColor: '#3b82f6',
+          pointRadius: 5,
+          pointHoverRadius: 8
+        }];
+        scales.y = {
+          type: 'linear',
+          display: true,
+          title: { display: true, text: '兒童死傷人數 (人)', color: '#3b82f6', font: { size: 12, weight: '600' } },
+          grid: { color: 'rgba(30, 41, 59, 0.6)' },
+          ticks: { color: '#3b82f6', callback: v => v.toLocaleString() + ' 人' }
+        };
+      }
+
+      trendChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: years,
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#cbd5e1',
+                font: { family: 'Noto Sans TC', size: 12 },
+                usePointStyle: true,
+                padding: 20
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              borderColor: '#334155',
+              borderWidth: 1,
+              padding: 12,
+              titleFont: { family: 'Noto Sans TC', weight: 'bold', size: 13 },
+              bodyFont: { family: 'Plus Jakarta Sans', size: 12 },
+              callbacks: {
+                label: function(context) {
+                  return ` ${context.dataset.label}: ${context.parsed.y.toLocaleString()} 人`;
+                }
+              }
+            }
+          },
+          scales: scales
+        }
+      });
+    }
+
+    // 初始化渲染圖表
+    renderChart('all');
+
+    // 切換圖表模式按鈕處理
+    function switchChartMode(mode) {
+      const modes = ['all', 'drug', 'underage', 'children'];
+      modes.forEach(m => {
+        const btn = document.getElementById('chartBtn-' + m);
+        if (m === mode) {
+          btn.className = 'px-3 py-1.5 rounded-lg font-semibold bg-rose-600 text-white transition-all shadow';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all';
+        }
+      });
+      renderChart(mode);
+    }
+
+    // Code Tab 切換
+    let activeTab = 'load';
+    function showCodeTab(tab) {
+      activeTab = tab;
+      ['load', 'trend', 'top10', 'pivot'].forEach(t => {
+        const pre = document.getElementById('code-' + t);
+        const btn = document.getElementById('tabBtn-' + t);
+        if (t === tab) {
+          pre.classList.remove('hidden');
+          btn.className = 'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 text-white transition-all shadow-md';
+        } else {
+          pre.classList.add('hidden');
+          btn.className = 'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:text-white transition-all';
+        }
+      });
+    }
+
+    // 一鍵複製代碼
+    function copyCode() {
+      const activePre = document.getElementById('code-' + activeTab);
+      const text = activePre.innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const btnText = document.getElementById('copyBtnText');
+        const btnIcon = document.getElementById('copyBtnIcon');
+        btnText.innerText = '已複製！';
+        btnIcon.className = 'fa-solid fa-check text-emerald-400';
+        setTimeout(() => {
+          btnText.innerText = '複製代碼';
+          btnIcon.className = 'fa-regular fa-copy';
+        }, 2500);
+      });
+    }
+  </script>
+</body>
+</html>
