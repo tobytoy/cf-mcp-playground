@@ -67,22 +67,26 @@
       </p>
 
       <!-- 主要按鈕列 (CTA) -->
-      <div class="flex flex-wrap items-center justify-center gap-3.5 sm:gap-4">
-        <a href="/traffic_safety_stats_107_114.csv" download="交通安全重點指標統計_107-114年.csv" class="group px-6 py-3.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 hover:from-rose-600 hover:to-amber-600 active:scale-95 text-white font-bold text-sm sm:text-base shadow-lg shadow-rose-500/25 transition-all duration-200 flex items-center gap-2.5">
-          <i class="fa-solid fa-cloud-arrow-down text-lg group-hover:-translate-y-0.5 transition-transform"></i>
-          <span>下載去識別化彙整資料 (CSV ~4.7MB)</span>
+      <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-3.5">
+        <a href="/traffic_safety_stats_107_114.csv" download="交通安全重點指標統計_107-114年.csv" class="group px-5 py-3 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 hover:from-rose-600 hover:to-amber-600 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-lg shadow-rose-500/25 transition-all duration-200 flex items-center gap-2">
+          <i class="fa-solid fa-file-csv text-base group-hover:-translate-y-0.5 transition-transform"></i>
+          <span>下載資料 (CSV ~4.7MB)</span>
         </a>
-        <a href="#schema" class="px-5 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white text-sm font-semibold transition flex items-center gap-2 backdrop-blur-md">
+        <a href="/traffic_safety_stats_107_114.json" download="交通安全重點指標統計_107-114年.json" class="group px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/25 transition-all duration-200 flex items-center gap-2">
+          <i class="fa-solid fa-file-code text-base group-hover:-translate-y-0.5 transition-transform"></i>
+          <span>下載全量 (JSON ~13MB)</span>
+        </a>
+        <a href="/traffic_safety_summary.json" target="_blank" class="px-4 py-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-emerald-500/30 hover:border-emerald-500/60 text-emerald-300 hover:text-emerald-200 text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 backdrop-blur-md">
+          <i class="fa-solid fa-bolt text-emerald-400"></i>
+          <span>摘要 API (JSON 2KB)</span>
+        </a>
+        <a href="#schema" class="px-4 py-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-300 hover:text-white text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 backdrop-blur-md">
           <i class="fa-solid fa-table-list text-sky-400"></i>
-          <span>資料表欄位規格</span>
+          <span>欄位規格</span>
         </a>
-        <a href="#python-guide" class="px-5 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white text-sm font-semibold transition flex items-center gap-2 backdrop-blur-md">
+        <a href="#python-guide" class="px-4 py-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-300 hover:text-white text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 backdrop-blur-md">
           <i class="fa-brands fa-python text-emerald-400"></i>
-          <span>Python 繪圖範例</span>
-        </a>
-        <a href="#metadata" class="px-5 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white text-sm font-semibold transition flex items-center gap-2 backdrop-blur-md">
-          <i class="fa-solid fa-database text-amber-400"></i>
-          <span>來源資料集代碼</span>
+          <span>程式範例</span>
         </a>
       </div>
     </header>
@@ -217,9 +221,17 @@
             CSV 檔案共 11 個欄位，UTF-8 編碼含 BOM，已完成鄉鎮市區標準化與事故類別標註
           </p>
         </div>
-        <span class="text-xs px-3 py-1 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20 font-mono font-medium">
-          traffic_safety_stats_107_114.csv
-        </span>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-300 border border-rose-500/20 font-mono font-medium">
+            traffic_safety_stats_107_114.csv (4.7MB)
+          </span>
+          <span class="text-xs px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20 font-mono font-medium">
+            traffic_safety_stats_107_114.json (13MB / 傳輸 330KB)
+          </span>
+          <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono font-medium">
+            traffic_safety_summary.json (2KB API)
+          </span>
+        </div>
       </div>
 
       <div class="overflow-x-auto rounded-xl border border-slate-800">
@@ -512,6 +524,9 @@
         <button onclick="showCodeTab('pivot')" id="tabBtn-pivot" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:text-white transition-all">
           4. 毒駕近年暴增樞紐交叉分析
         </button>
+        <button onclick="showCodeTab('json')" id="tabBtn-json" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:text-white transition-all">
+          5. JSON API 載入 (Web & Python)
+        </button>
       </div>
 
       <!-- 程式碼展示區 -->
@@ -605,6 +620,25 @@ pivot_drug = df_drug.pivot_table(index=<span class="text-emerald-300">'縣市'</
 top5_counties = pivot_drug.sort_values(by=<span class="text-amber-300">2025</span>, ascending=<span class="text-purple-400">False</span>).head(<span class="text-amber-300">5</span>)
 <span class="text-blue-400">print</span>(<span class="text-emerald-300">"=== 毒駕近年暴增主要縣市 (近四年) ==="</span>)
 <span class="text-blue-400">print</span>(top5_counties[[<span class="text-amber-300">2022</span>, <span class="text-amber-300">2023</span>, <span class="text-amber-300">2024</span>, <span class="text-amber-300">2025</span>]])</code></pre>
+
+        <!-- Tab 5 -->
+        <pre id="code-json" class="hidden leading-relaxed"><code class="block whitespace-pre"><span class="text-slate-500"># 步驟 5: 直接使用 JSON 格式 (全量明細 或 輕量 2KB 摘要 API)</span>
+
+<span class="text-slate-500"># 做法 A: Python Pandas 直接讀取全量 JSON (47,946 筆明細)</span>
+<span class="text-purple-400">import</span> pandas <span class="text-purple-400">as</span> pd
+df = pd.read_json(<span class="text-emerald-300">"https://traffic-safety-opendata.pages.dev/traffic_safety_stats_107_114.json"</span>)
+<span class="text-blue-400">print</span>(<span class="text-amber-300">f"全量 JSON 載入成功，共 {len(df):,} 筆"</span>)
+
+<span class="text-slate-500"># 做法 B: 讀取輕量彙總摘要 API (僅 ~2KB，適合前端/Bot/即時看板秒級載入)</span>
+<span class="text-purple-400">import</span> requests
+summary = requests.get(<span class="text-emerald-300">"https://traffic-safety-opendata.pages.dev/traffic_safety_summary.json"</span>).json()
+<span class="text-blue-400">print</span>(<span class="text-amber-300">"核心 KPI:"</span>, summary[<span class="text-emerald-300">"kpi_totals"</span>])
+<span class="text-blue-400">print</span>(<span class="text-amber-300">"歷年趨勢陣列:"</span>, summary[<span class="text-emerald-300">"annual_trends"</span>])
+
+<span class="text-slate-500"># 做法 C: 現代瀏覽器 JavaScript (一秒 fetch 繪製圖表)</span>
+<span class="text-slate-500"># fetch('https://traffic-safety-opendata.pages.dev/traffic_safety_summary.json')</span>
+<span class="text-slate-500">#   .then(res => res.json())</span>
+<span class="text-slate-500">#   .then(data => console.log(data.annual_trends));</span></code></pre>
       </div>
     </section>
 
@@ -830,7 +864,7 @@ top5_counties = pivot_drug.sort_values(by=<span class="text-amber-300">2025</spa
     let activeTab = 'load';
     function showCodeTab(tab) {
       activeTab = tab;
-      ['load', 'trend', 'top10', 'pivot'].forEach(t => {
+      ['load', 'trend', 'top10', 'pivot', 'json'].forEach(t => {
         const pre = document.getElementById('code-' + t);
         const btn = document.getElementById('tabBtn-' + t);
         if (t === tab) {
