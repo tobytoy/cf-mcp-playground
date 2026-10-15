@@ -10,18 +10,21 @@
   "scripts": {
     "dev:transport": "npm run dev --workspace=workers/transport-mcp",
     "dev:radar": "npm run dev --workspace=workers/rail-radar",
+    "dev:parking": "npm run dev --workspace=workers/parking-radar",
     "dev:line": "npm run dev --workspace=workers/line-assistant",
     "dev:personal": "npm run dev --workspace=workers/personal-assistant",
     "deploy:transport": "npm run deploy --workspace=workers/transport-mcp",
     "deploy:radar": "npm run deploy --workspace=workers/rail-radar",
+    "deploy:parking": "npm run deploy --workspace=workers/parking-radar",
     "deploy:line": "npm run deploy --workspace=workers/line-assistant",
     "deploy:personal": "npm run deploy --workspace=workers/personal-assistant",
-    "deploy:all": "npm run deploy:transport && npm run deploy:radar && npm run deploy:line && npm run deploy:personal",
+    "deploy:all": "npm run deploy:transport && npm run deploy:radar && npm run deploy:parking && npm run deploy:line && npm run deploy:personal",
     "test:transport": "npm test --workspace=workers/transport-mcp",
     "test:radar": "npm test --workspace=workers/rail-radar",
+    "test:parking": "npm test --workspace=workers/parking-radar",
     "test:line": "npm run test --workspace=workers/line-assistant",
     "test:personal": "npm run test --workspace=workers/personal-assistant",
-    "test:all": "npm run test:transport && npm run test:radar && npm run test:line && npm run test:personal"
+    "test:all": "npm run test:transport && npm run test:radar && npm run test:parking && npm run test:line && npm run test:personal"
   },
   "devDependencies": {
     "typescript": "^5.7.3"
